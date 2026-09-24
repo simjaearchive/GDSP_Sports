@@ -120,7 +120,36 @@
 
   .back-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .back-btn{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;font-weight:700;color:var(--accent2);cursor:pointer}
-  .sport-title{font-size:16px;font-weight:800;display:flex;align-items:center;gap:6px;color:var(--text)}
+  .sport-title{
+    font-size:23px;font-weight:800;display:flex;align-items:center;gap:8px;color:var(--text);
+    font-family:'YeogiOttaeJalnan',-apple-system,"Malgun Gothic","맑은 고딕",sans-serif;letter-spacing:-.2px
+  }
+  @media(min-width:600px){ .sport-title{font-size:28px} }
+
+  .search-box{margin-bottom:14px}
+  .search-box input{
+    width:100%;padding:12px 14px;border:1px solid var(--line);background:var(--card);color:var(--text);
+    border-radius:10px;font-size:15px;font-family:inherit
+  }
+
+  /* 조별예선 표 */
+  .table-wrap{overflow-x:auto;margin-bottom:14px;border-radius:12px}
+  .group-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px}
+  .group-table th{
+    background:var(--card2);color:var(--muted);font-size:10.5px;font-weight:700;
+    text-align:center;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap
+  }
+  .group-table td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+  .group-table tr:last-child td{border-bottom:none}
+  .gt-when, .gt-where{font-size:11px;color:var(--muted);white-space:nowrap;text-align:center}
+  .gt-result{min-width:190px}
+  .gt-teams{display:flex;align-items:center;justify-content:center;gap:8px}
+  .gt-teams .team-name{flex:1;text-align:center;font-size:15px;font-weight:800;color:var(--text);letter-spacing:-.2px}
+  .gt-teams .team-name.win{color:var(--win)}
+  .gt-teams .team-name.draw{color:var(--draw)}
+  .gt-score{font-weight:900;font-size:19px;color:var(--accent2);letter-spacing:.3px;white-space:nowrap}
+  .gt-vs{font-size:11px;color:var(--pending);font-weight:700}
+  .gt-status{display:block;text-align:center;font-size:10px;margin-top:4px;color:var(--muted)}
 
   .day{margin-bottom:18px}
   .day h2{
@@ -305,6 +334,41 @@
     {id:"final", name:"본선 토너먼트"}
   ];
 
+/* ⑤ 조별예선/본선 토너먼트 하위의 세부 구분(부문) 탭 — 종목별 고정 목록.
+   이 목록에 있는 종목은 "구분(부문)" 입력칸이 자유 텍스트 대신 이 목록에서
+   고르는 선택창으로 바뀝니다. */
+  const DIVISIONS_BY_SPORT = {
+    basketball: ["여중 1,2학년", "남중 1,2학년", "여고 1,2학년", "남고 1,2학년"],
+    three:      ["여초 5,6학년", "남초 5,6학년", "여중 3학년", "남중 3학년", "여고 3학년", "남고 3학년"]
+  };
+
+/* ⑥ 조별예선 안에서 나뉘는 조(A~F조). 구분(부문)마다 조 개수가 다를 수 있어서
+   따로 지정 안 된 구분은 기본값(A~F)을 씁니다. */
+  const DEFAULT_POOLS = ["A","B","C","D","E","F"];
+  const POOLS_BY_DIVISION = {
+    basketball: {
+      "여중 1,2학년": ["A","B","C","D"],
+      "여고 1,2학년": ["A","B"]
+    },
+    three: {
+      "여초 5,6학년": ["A","B"],
+      "남초 5,6학년": ["A","B","C"],
+      "여고 3학년":   ["A","B"]
+    }
+  };
+  function poolsFor(sportId, division){
+    return (POOLS_BY_DIVISION[sportId] && POOLS_BY_DIVISION[sportId][division]) || DEFAULT_POOLS;
+  }
+
+/* ⑦ 맛보기용 샘플 경기 — 농구 · 조별예선 · 남중 1,2학년 A~F조에 팀명을 "OO중학교"로 채운
+   더미 데이터입니다. 표 디자인을 미리 볼 수 있게 처음 한 번만 자동으로 채워지며,
+   관리자 탭에서 실제 학교명·일정으로 자유롭게 수정·삭제하면 됩니다. */
+  const SEED_MATCHES = poolsFor("basketball","남중 1,2학년").map((p,i)=>({
+    sport:"basketball", stage:"group", group:"남중 1,2학년", pool:p,
+    date:"10월 11일(일)", time:String(9+i).padStart(2,"0")+":00", place:"강동체육관 1코트",
+    teamA:"OO중학교", teamB:"OO중학교", round:"", score:"", winner:""
+  }));
+
 /* ================= 상태 & 저장소 ================= */
   let matches = {};                 // { id: {sport,date,time,place,group,round,teamA,teamB,score,winner,ts} }
   let noticeGlobal = "";            // 대회 전체 공지사항
@@ -315,6 +379,7 @@
   const LS_KEY = "kdsp2026_matches";
   const NOTICE_G_KEY = "kdsp2026_notice_global";
   const NOTICE_S_KEY = "kdsp2026_notice_bysport";
+  const SEEDED_KEY = "kdsp2026_seeded_v1";
 
   function configured(){
     return firebaseConfig.databaseURL && firebaseConfig.databaseURL.indexOf("여기에") === -1;
@@ -352,6 +417,7 @@
     document.getElementById("offlineBanner").classList.remove("hide");
     setConn("off","이 브라우저 저장 모드 (실시간 공유 안 됨)");
     matches = readLS();
+    seedIfNeeded();
     noticeGlobal = readNoticeGlobalLS();
     noticeBySport = readNoticeSportLS();
     window.addEventListener("storage", e=>{
@@ -365,6 +431,17 @@
     };
   }
   function readLS(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||"{}"); }catch(e){ return {}; } }
+  function seedIfNeeded(){
+    try{
+      if(localStorage.getItem(SEEDED_KEY)) return;
+      localStorage.setItem(SEEDED_KEY, "1");
+      if(Object.keys(matches).length) return;
+      SEED_MATCHES.forEach((rec,i)=>{
+        matches[newId()] = Object.assign({}, rec, {ts:Date.now(), order:i});
+      });
+      localStorage.setItem(LS_KEY, JSON.stringify(matches));
+    }catch(e){}
+  }
   function readNoticeGlobalLS(){ try{ return JSON.parse(localStorage.getItem(NOTICE_G_KEY)||'""'); }catch(e){ return ""; } }
   function readNoticeSportLS(){ try{ return JSON.parse(localStorage.getItem(NOTICE_S_KEY)||'{}'); }catch(e){ return {}; } }
 
@@ -451,10 +528,16 @@
   let curSport = null;         // null = 종목 선택 화면
   let schedFilter = "전체";
   let schedStage = "group";    // 농구·3X3 농구 전용: 조별예선/본선 토너먼트
+  let schedDivision = null;    // 농구·3X3 농구 전용: 세부 구분(부문)
+  let schedPool = "A";         // 농구·3X3 농구 조별예선 전용: A~F조
+  let schedMode = "schedule";  // 'schedule' | 'search'
+  let schedSearchQuery = "";   // 검색 탭에 입력한 학교 이름
 
   let admView = "pick";        // 'pick' | 'pw' | 'panel'
   let admSelSport = null;      // 관리자 화면에서 선택(또는 인증)된 종목
   let admStage = "group";      // 관리자 화면에서 선택된 조별예선/본선 (농구·3X3 농구 전용)
+  let admDivision = null;      // 관리자 화면에서 선택된 세부 구분(부문) (농구·3X3 농구 전용)
+  let admPool = "A";           // 관리자 화면에서 선택된 A~F조 (농구·3X3 농구 조별예선 전용)
   let admPwErr = "";
 
   function renderAll(){
@@ -501,17 +584,21 @@
         </div>`;
       }).join("")}</div>`;
       box.querySelectorAll(".sport-card").forEach(c=>{
-        c.onclick = ()=>{ curSport=c.dataset.s; schedFilter="전체"; schedStage="group"; renderHome(); };
+        c.onclick = ()=>{ curSport=c.dataset.s; schedFilter="전체"; schedStage="group"; schedDivision=null; schedPool="A"; schedMode="schedule"; schedSearchQuery=""; renderHome(); };
       });
       return;
     }
 
     const sport = sportById[curSport];
     const hasStage = STAGE_SPORTS.has(curSport);
-    let list = matchesOf(curSport);
-    if(hasStage) list = list.filter(([,m])=> (m.stage||"group") === schedStage);
-    const dates = [...new Set(list.map(([,m])=>m.date).filter(Boolean))];
+    const divisions = hasStage ? DIVISIONS_BY_SPORT[curSport] : null;
+    if(hasStage && (!schedDivision || !divisions.includes(schedDivision))) schedDivision = divisions[0];
     const sNotice = (noticeBySport[curSport]||"").trim();
+
+    // 조별예선/본선 토너먼트(농구·3X3) 또는 일정(그 외) + 검색, 항상 마지막에 검색 탭
+    const modeButtons = hasStage
+      ? STAGES.map(st=>({id:st.id, label:st.name, kind:"stage"})).concat([{id:"search", label:"🔍 검색", kind:"search"}])
+      : [{id:"schedule", label:"일정", kind:"schedule"}, {id:"search", label:"🔍 검색", kind:"search"}];
 
     let html = `<div class="back-row">
       <button class="back-btn" id="backHome">← 종목 선택</button>
@@ -520,34 +607,138 @@
     html += `<div class="notice-box sport"><h3>📢 ${escapeHtml(sport.name)} 종목 공지사항</h3>` +
       (sNotice ? `<div class="notice-body">${escapeHtml(sNotice)}</div>`
                : `<div class="empty">등록된 공지 사항이 없습니다.</div>`) + `</div>`;
-    if(hasStage){
-      html += `<div class="stage-tabs" id="stageTabs">${STAGES.map(st=>
-        `<button class="${st.id===schedStage?"active":""}" data-v="${st.id}">${st.name}</button>`
-      ).join("")}</div>`;
-    }
-    html += `<div class="filters" id="schedFilters">${pill(["전체",...dates], schedFilter)}</div>`;
+    html += `<div class="stage-tabs" id="modeTabs">${modeButtons.map(b=>{
+      const active = b.kind==="search" ? schedMode==="search" : (schedMode!=="search" && (b.kind!=="stage" || b.id===schedStage));
+      return `<button class="${active?"active":""}" data-kind="${b.kind}" data-v="${b.id}">${b.label}</button>`;
+    }).join("")}</div>`;
 
-    if(!list.length){
-      html += `<div class="empty-msg">아직 등록된 경기가 없습니다.<br>관리자 탭에서 경기를 등록해 주세요.</div>`;
+    const inGroupStage = hasStage && schedStage==="group";
+
+    if(schedMode==="search"){
+      html += `<div class="search-box"><input id="schoolSearch" type="text" placeholder="학교 이름을 입력하세요 (예: 방이중)" value="${escapeHtml(schedSearchQuery)}"></div>`;
+      html += `<div id="searchResults"></div>`;
+    }else if(inGroupStage){
+      // 조별예선: 구분(부문) → 조(구분별로 개수가 다름) → 표
+      const pools = poolsFor(curSport, schedDivision);
+      if(!pools.includes(schedPool)) schedPool = pools[0];
+      html += `<div class="filters" id="divTabs">${divisions.map(d=>
+        `<button class="${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
+      ).join("")}</div>`;
+      html += `<div class="filters" id="poolTabs">${pools.map(p=>
+        `<button class="${p===schedPool?"active":""}" data-v="${p}">${p}조</button>`
+      ).join("")}</div>`;
+      let list = matchesOf(curSport)
+        .filter(([,m])=> (m.stage||"group") === "group")
+        .filter(([,m])=> (m.group||"") === schedDivision)
+        .filter(([,m])=> (m.pool||"") === schedPool);
+      html += renderGroupTable(list);
     }else{
-      const shown = schedFilter==="전체" ? dates : [schedFilter];
-      const groups = (schedFilter==="전체" ? dates : shown).length ? shown : ["미정"];
-      html += groups.map(d=>{
-        const ms = list.filter(([,m])=> (m.date||"미정") === d || (!m.date && d==="미정"));
-        if(!ms.length) return "";
-        return `<div class="day"><h2>${escapeHtml(d)} · ${ms.length}경기</h2>${ms.map(([id,m])=>matchCard(m)).join("")}</div>`;
-      }).join("");
+      if(hasStage){
+        html += `<div class="filters" id="divTabs">${divisions.map(d=>
+          `<button class="${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
+        ).join("")}</div>`;
+      }
+      let list = matchesOf(curSport);
+      if(hasStage){
+        list = list.filter(([,m])=> (m.stage||"group") === schedStage);
+        list = list.filter(([,m])=> (m.group||"") === schedDivision);
+      }
+      const dates = [...new Set(list.map(([,m])=>m.date).filter(Boolean))];
+      html += `<div class="filters" id="schedFilters">${pill(["전체",...dates], schedFilter)}</div>`;
+
+      if(!list.length){
+        html += `<div class="empty-msg">아직 등록된 경기가 없습니다.<br>관리자 탭에서 경기를 등록해 주세요.</div>`;
+      }else{
+        const shown = schedFilter==="전체" ? dates : [schedFilter];
+        const groups = (schedFilter==="전체" ? dates : shown).length ? shown : ["미정"];
+        html += groups.map(d=>{
+          const ms = list.filter(([,m])=> (m.date||"미정") === d || (!m.date && d==="미정"));
+          if(!ms.length) return "";
+          return `<div class="day"><h2>${escapeHtml(d)} · ${ms.length}경기</h2>${ms.map(([id,m])=>matchCard(m)).join("")}</div>`;
+        }).join("");
+      }
     }
 
     box.innerHTML = html;
     document.getElementById("backHome").onclick = ()=>{ curSport=null; renderHome(); };
-    const sEl = document.getElementById("stageTabs");
-    if(sEl) sEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{ schedStage=b.dataset.v; schedFilter="전체"; renderHome(); });
+    document.getElementById("modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+      if(b.dataset.kind==="stage"){ schedStage=b.dataset.v; schedMode="schedule"; schedFilter="전체"; }
+      else if(b.dataset.kind==="schedule"){ schedMode="schedule"; }
+      else{ schedMode="search"; }
+      renderHome();
+    });
+    const dvEl = document.getElementById("divTabs");
+    if(dvEl) dvEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{ schedDivision=b.dataset.v; schedFilter="전체"; renderHome(); });
+    const pEl = document.getElementById("poolTabs");
+    if(pEl) pEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{ schedPool=b.dataset.v; renderHome(); });
     const fEl = document.getElementById("schedFilters");
     if(fEl) fEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{ schedFilter=b.dataset.v; renderHome(); });
+    if(schedMode==="search"){
+      const si = document.getElementById("schoolSearch");
+      if(si){
+        si.oninput = ()=>{ schedSearchQuery = si.value; renderSearchResults(); };
+        si.focus();
+        si.setSelectionRange(si.value.length, si.value.length);
+      }
+      renderSearchResults();
+    }
   }
 
-  function matchCard(m){
+  function renderSearchResults(){
+    const wrap = document.getElementById("searchResults");
+    if(!wrap) return;
+    const q = schedSearchQuery.trim();
+    const hasStage = STAGE_SPORTS.has(curSport);
+    if(!q){
+      wrap.innerHTML = `<div class="empty-msg">학교 이름을 입력하면 그 학교의 경기를 모아서 보여드려요.</div>`;
+      return;
+    }
+    const qLower = q.toLowerCase();
+    const found = matchesOf(curSport).filter(([,m])=>
+      (m.teamA||"").toLowerCase().includes(qLower) || (m.teamB||"").toLowerCase().includes(qLower)
+    );
+    if(!found.length){
+      wrap.innerHTML = `<div class="empty-msg">"${escapeHtml(q)}" 학교의 경기를 찾을 수 없습니다.</div>`;
+      return;
+    }
+    wrap.innerHTML = found.map(([id,m])=>{
+      const stageName = hasStage ? (STAGES.find(s=>s.id===(m.stage||"group"))||{}).name : null;
+      return matchCard(m, {showDate:true, stageName});
+    }).join("");
+  }
+
+  function renderGroupTable(list){
+    if(!list.length){
+      return `<div class="empty-msg">아직 등록된 경기가 없습니다.<br>관리자 탭에서 경기를 등록해 주세요.</div>`;
+    }
+    const rows = list.map(([id,m])=>{
+      const isDone = !!m.winner;
+      const aWin = m.winner==="A", bWin = m.winner==="B", draw = m.winner==="D";
+      const teamsHtml = m.score
+        ? `<div class="gt-teams">
+            <span class="team-name ${aWin?"win":(draw?"draw":"")}">${escapeHtml(m.teamA||"미정")}</span>
+            <span class="gt-score">${escapeHtml(m.score)}</span>
+            <span class="team-name ${bWin?"win":(draw?"draw":"")}">${escapeHtml(m.teamB||"미정")}</span>
+          </div>`
+        : `<div class="gt-teams">
+            <span class="team-name">${escapeHtml(m.teamA||"미정")}</span>
+            <span class="gt-vs">VS</span>
+            <span class="team-name">${escapeHtml(m.teamB||"미정")}</span>
+          </div>`;
+      return `<tr>
+        <td class="gt-when">${escapeHtml(m.date||"-")}${m.time?`<br>${escapeHtml(m.time)}`:""}</td>
+        <td class="gt-where">${escapeHtml(m.place||"-")}</td>
+        <td class="gt-result">${teamsHtml}<span class="gt-status">${isDone?"종료":"예정"}</span></td>
+      </tr>`;
+    }).join("");
+    return `<div class="table-wrap"><table class="group-table">
+      <thead><tr><th>일시</th><th>장소</th><th>결과</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+  }
+
+  function matchCard(m, opts){
+    opts = opts || {};
     const isDone = !!m.winner;
     const statusBadge = isDone ? `<span class="badge done">종료</span>` : `<span class="badge">예정</span>`;
     const aWin = m.winner==="A", bWin = m.winner==="B", draw = m.winner==="D";
@@ -556,6 +747,8 @@
       : `<span class="score"><span class="vs">VS</span></span>`;
     return `<div class="match">
       <div class="meta">
+        ${opts.showDate && m.date ? `<span class="badge">${escapeHtml(m.date)}</span>`:""}
+        ${opts.stageName ? `<span class="badge">${escapeHtml(opts.stageName)}</span>`:""}
         ${m.group ? `<span class="badge">${escapeHtml(m.group)}</span>`:""}
         ${m.round ? `<span class="badge round">${escapeHtml(m.round)}</span>`:""}
         <span>${escapeHtml(m.time||"")}</span>
@@ -613,6 +806,8 @@
         admSelSport = c.dataset.s;
         admPwErr = "";
         admStage = "group";
+        admDivision = null;
+        admPool = "A";
         admView = isAdminFor(admSelSport) ? "panel" : "pw";
         renderAdminRoot();
       };
@@ -665,10 +860,26 @@
     el.querySelectorAll("button").forEach(b=> b.classList.toggle("active", b.dataset.v===admStage));
   }
 
+  function renderAdminDivTabs(){
+    const el = document.getElementById("admDivTabs");
+    if(!el) return;
+    el.querySelectorAll("button").forEach(b=> b.classList.toggle("active", b.dataset.v===admDivision));
+  }
+
+  function renderAdminPoolTabs(){
+    const el = document.getElementById("admPoolTabs");
+    if(!el) return;
+    el.querySelectorAll("button").forEach(b=> b.classList.toggle("active", b.dataset.v===admPool));
+  }
+
   function renderAdminPanelShell(){
     const root = document.getElementById("adminRoot");
     const sport = sportById[admSelSport];
     const hasStage = STAGE_SPORTS.has(admSelSport);
+    const divisions = hasStage ? DIVISIONS_BY_SPORT[admSelSport] : null;
+    if(hasStage && (!admDivision || !divisions.includes(admDivision))) admDivision = divisions[0];
+    const pools = hasStage ? poolsFor(admSelSport, admDivision) : null;
+    if(hasStage && !pools.includes(admPool)) admPool = pools[0];
     root.dataset.shellSport = admSelSport;
     root.innerHTML = `
       <div class="adm-bar">
@@ -697,13 +908,16 @@
 
       <div class="add-form">
         <h3>➕ 새 경기 등록</h3>
-        ${hasStage ? `<label>단계</label><select id="f_stage">${STAGES.map(st=>`<option value="${st.id}">${st.name}</option>`).join("")}</select>` : ``}
+        ${hasStage ? `<label>단계</label><select id="f_stage">${STAGES.map(st=>`<option value="${st.id}" ${st.id===admStage?"selected":""}>${st.name}</option>`).join("")}</select>` : ``}
+        ${hasStage ? `<div id="f_poolWrap" class="${admStage!=="group"?"hide":""}" style="margin-top:8px"><label>조</label><select id="f_pool">${pools.map(p=>`<option value="${p}" ${p===admPool?"selected":""}>${p}조</option>`).join("")}</select></div>` : ``}
         <div class="grid2">
           <div><label>날짜</label><input id="f_date" placeholder="예: 10월 5일(월)"></div>
           <div><label>시간</label><input id="f_time" placeholder="예: 10:00"></div>
         </div>
         <div class="grid2">
-          <div><label>구분(부문)</label><input id="f_group" placeholder="예: 남자부 / 초등부 (선택)"></div>
+          <div><label>구분(부문)</label>${hasStage
+            ? `<select id="f_group">${divisions.map(d=>`<option value="${escapeHtml(d)}" ${d===admDivision?"selected":""}>${escapeHtml(d)}</option>`).join("")}</select>`
+            : `<input id="f_group" placeholder="예: 남자부 / 초등부 (선택)">`}</div>
           <div><label>라운드</label><input id="f_round" placeholder="${hasStage ? "예: 1조 1경기 / 8강 / 결승 (선택)" : "예: 예선 / 8강 / 결승 (선택)"}"></div>
         </div>
         <div class="grid2">
@@ -715,6 +929,8 @@
       </div>
 
       ${hasStage ? `<div class="stage-tabs" id="admStageTabs">${STAGES.map(st=>`<button class="${st.id===admStage?"active":""}" data-v="${st.id}">${st.name}</button>`).join("")}</div>` : ``}
+      ${hasStage ? `<div class="filters" id="admDivTabs">${divisions.map(d=>`<button class="${d===admDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`).join("")}</div>` : ``}
+      ${hasStage && admStage==="group" ? `<div class="filters" id="admPoolTabs">${pools.map(p=>`<button class="${p===admPool?"active":""}" data-v="${p}">${p}조</button>`).join("")}</div>` : ``}
 
       <div id="adminList"></div>
     `;
@@ -747,16 +963,34 @@
     };
     if(hasStage){
       document.getElementById("admStageTabs").querySelectorAll("button").forEach(b=>{
-        b.onclick = ()=>{ admStage=b.dataset.v; renderAdminStageTabs(); renderAdmin(); };
+        b.onclick = ()=>{ admStage=b.dataset.v; renderAdminPanelShell(); };
+      });
+      document.getElementById("admDivTabs").querySelectorAll("button").forEach(b=>{
+        b.onclick = ()=>{ admDivision=b.dataset.v; renderAdminPanelShell(); };
+      });
+      const pt = document.getElementById("admPoolTabs");
+      if(pt) pt.querySelectorAll("button").forEach(b=>{
+        b.onclick = ()=>{
+          admPool=b.dataset.v; renderAdminPoolTabs(); renderAdmin();
+          const fp = document.getElementById("f_pool");
+          if(fp) fp.value = admPool;
+        };
+      });
+      const fs = document.getElementById("f_stage");
+      if(fs) fs.addEventListener("change", ()=>{
+        const pw = document.getElementById("f_poolWrap");
+        if(pw) pw.classList.toggle("hide", fs.value !== "group");
       });
     }
     document.getElementById("addMatchBtn").onclick = ()=>{
       const teamA = document.getElementById("f_teamA").value.trim();
       const teamB = document.getElementById("f_teamB").value.trim();
       if(!teamA || !teamB){ alert("팀 A, 팀 B 이름을 모두 입력하세요."); return; }
+      const chosenStage = hasStage ? document.getElementById("f_stage").value : "";
       addMatch({
         sport: admSelSport,
-        stage: hasStage ? document.getElementById("f_stage").value : "",
+        stage: chosenStage,
+        pool: (hasStage && chosenStage==="group") ? document.getElementById("f_pool").value : "",
         date: document.getElementById("f_date").value.trim(),
         time: document.getElementById("f_time").value.trim(),
         place: document.getElementById("f_place").value.trim(),
@@ -764,7 +998,10 @@
         round: document.getElementById("f_round").value.trim(),
         teamA, teamB, score:"", winner:""
       });
-      ["f_date","f_time","f_group","f_round","f_teamA","f_teamB","f_place"].forEach(id=>document.getElementById(id).value="");
+      const resetIds = hasStage
+        ? ["f_date","f_time","f_round","f_teamA","f_teamB","f_place"]
+        : ["f_date","f_time","f_group","f_round","f_teamA","f_teamB","f_place"];
+      resetIds.forEach(id=>document.getElementById(id).value="");
       renderAdmin();
     };
 
@@ -777,14 +1014,20 @@
     const wrap = document.getElementById("adminList");
     if(!wrap) return;
     const hasStage = STAGE_SPORTS.has(admSelSport);
+    const divisions = hasStage ? DIVISIONS_BY_SPORT[admSelSport] : null;
+    const pools = hasStage ? poolsFor(admSelSport, admDivision) : null;
     let list = matchesOf(admSelSport);
-    if(hasStage) list = list.filter(([,m])=> (m.stage||"group") === admStage);
+    if(hasStage){
+      list = list.filter(([,m])=> (m.stage||"group") === admStage);
+      list = list.filter(([,m])=> (m.group||"") === admDivision);
+      if(admStage==="group") list = list.filter(([,m])=> (m.pool||"") === admPool);
+    }
     if(document.activeElement && wrap.contains(document.activeElement)){
       admPending = true; return;
     }
     admPending = false;
     if(!list.length){
-      wrap.innerHTML = `<div class="empty-msg">등록된 ${sportById[admSelSport].name}${hasStage ? " · "+STAGES.find(s=>s.id===admStage).name : ""} 경기가 없습니다.</div>`;
+      wrap.innerHTML = `<div class="empty-msg">등록된 ${sportById[admSelSport].name}${hasStage ? " · "+STAGES.find(s=>s.id===admStage).name+" · "+admDivision+(admStage==="group"?" · "+admPool+"조":"") : ""} 경기가 없습니다.</div>`;
       return;
     }
     wrap.innerHTML = list.map(([id,m],i)=>`<div class="adm-row" data-id="${id}">
@@ -792,11 +1035,16 @@
           <span>#${i+1} ${m.ts?("· "+new Date(m.ts).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})):""} ${m.winner?`<span class="saved-tag">· 결과 입력됨</span>`:""}</span>
           <span class="movebtns"><button class="up">▲</button><button class="down">▼</button></span>
         </div>
-        ${hasStage ? `<div class="adm-in full"><span class="lbl">단계</span><select class="i-stage">${STAGES.map(st=>`<option value="${st.id}" ${((m.stage||"group")===st.id)?"selected":""}>${st.name}</option>`).join("")}</select></div>` : ``}
+        ${hasStage ? `<div class="adm-in">
+          <div><span class="lbl">단계</span><select class="i-stage">${STAGES.map(st=>`<option value="${st.id}" ${((m.stage||"group")===st.id)?"selected":""}>${st.name}</option>`).join("")}</select></div>
+          <div><span class="lbl">조</span><select class="i-pool">${pools.map(p=>`<option value="${p}" ${((m.pool||"")===p)?"selected":""}>${p}조</option>`).join("")}</select></div>
+        </div>` : ``}
         <div class="adm-in">
           <div><span class="lbl">날짜</span><input class="i-date" value="${escapeHtml(m.date||"")}"></div>
           <div><span class="lbl">시간</span><input class="i-time" value="${escapeHtml(m.time||"")}"></div>
-          <div><span class="lbl">구분</span><input class="i-group" value="${escapeHtml(m.group||"")}"></div>
+          <div><span class="lbl">구분</span>${hasStage
+            ? `<select class="i-group">${divisions.map(d=>`<option value="${escapeHtml(d)}" ${((m.group||"")===d)?"selected":""}>${escapeHtml(d)}</option>`).join("")}</select>`
+            : `<input class="i-group" value="${escapeHtml(m.group||"")}">`}</div>
           <div><span class="lbl">라운드</span><input class="i-round" value="${escapeHtml(m.round||"")}"></div>
           <div><span class="lbl">팀 A</span><input class="i-teamA" value="${escapeHtml(m.teamA||"")}"></div>
           <div><span class="lbl">팀 B</span><input class="i-teamB" value="${escapeHtml(m.teamB||"")}"></div>
@@ -835,6 +1083,8 @@
         };
         const stageSel = row.querySelector(".i-stage");
         if(stageSel) payload.stage = stageSel.value;
+        const poolSel = row.querySelector(".i-pool");
+        if(poolSel) payload.pool = poolSel.value;
         updateMatch(id, payload);
       };
       row.querySelector(".del").onclick = ()=>{ if(confirm("이 경기를 삭제할까요?")) deleteMatch(id); };
