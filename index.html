@@ -708,7 +708,10 @@
       const a = get(m.teamA), b = get(m.teamB);
       const win = m.winner==="A" ? a : b, lose = m.winner==="A" ? b : a;
       win.w++; win.h2h[lose.team] = (win.h2h[lose.team]||0) + 1;   // 승자승 기록
-      if(m.forfeit) return;   // 기권·몰수: 승은 인정, 점수(율)·세트 환산은 적용하지 않음
+      if(m.forfeit){          // 기권·몰수: 승은 인정, 세트는 2:0으로 계산, 점수(율) 환산은 적용하지 않음
+        win.sw += 2; lose.sl += 2;
+        return;
+      }
       (m.sets||[]).forEach(s=>{
         if(s.a==="" || s.b==="" || s.a==null || s.b==null) return;
         const na = Number(s.a), nb = Number(s.b);
@@ -1316,9 +1319,9 @@
         // 기권·몰수: 승은 인정, 점수(율) 환산은 적용하지 않음
         out.winner = f.forfeit;
         out.score = "기권승";
-        out.detail = `기권·몰수 (${f.forfeit==="A"?nameA:nameB} 승 인정, 점수율 환산 미적용)`;
+        out.detail = `기권·몰수 (${f.forfeit==="A"?nameA:nameB} 승 인정 · 세트 2:0 · 점수율 환산 미적용)`;
         out.store = {sets:sets, forfeit:f.forfeit, inA:"", inB:""};
-        out.previewHtml = line(`기권·몰수: <b>${f.forfeit==="A"?eA:eB}</b> 승 인정 · 점수율 환산 미적용`);
+        out.previewHtml = line(`기권·몰수: <b>${f.forfeit==="A"?eA:eB}</b> 승 인정 · 세트 2:0 · 점수율 환산 미적용`);
         return out;
       }
       sets.forEach((s,i)=>{
