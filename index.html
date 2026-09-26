@@ -103,6 +103,16 @@
     flex:1;padding:10px 8px;border:1px solid var(--line);background:var(--card);
     border-radius:10px;font-size:13px;font-weight:800;color:var(--muted);cursor:pointer;
   }
+  /* 탭 글자가 줄바꿈되지 않도록: 한 줄 고정 + 화면 폭에 맞춰 글자 크기 조정 */
+  .stage-tabs{gap:5px}
+  .stage-tabs button, .tabs button{
+    min-width:0;white-space:nowrap;overflow:hidden;text-overflow:clip;
+    padding-left:3px;padding-right:3px;font-size:clamp(9.5px,3vw,13px)
+  }
+  @media(min-width:520px){
+    .stage-tabs{gap:8px}
+    .stage-tabs button, .tabs button{font-size:13px}
+  }
   .stage-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 4px 12px rgba(228,38,95,.3)}
 
   /* 종목 선택 홈 */
@@ -240,6 +250,14 @@
   .save-ico{font-size:40px;line-height:1}
   .save-msg{font-size:16px;font-weight:800;color:var(--text);margin:12px 0 18px}
   .save-dialog .btn{width:100%}
+  .standings th,.standings td{padding-left:4px;padding-right:4px}
+  .tb-box{border-color:var(--gold)}
+  .tb-desc{font-size:11.5px;color:var(--muted);margin-bottom:8px}
+  .tb-group{background:var(--card2);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+  .tb-title{font-size:11px;font-weight:800;color:var(--gold);margin-bottom:6px}
+  .tb-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px;font-weight:800;font-size:14px}
+  .tb-line select{padding:6px 8px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;font-size:13px}
+  .standings-note{font-size:11px;color:var(--muted);margin:-6px 0 14px}
   .gt-detail,.detail{display:block;text-align:center;font-size:10.5px;color:var(--muted);margin-top:3px}
   .detail{margin-top:6px;text-align:left}
 
@@ -358,7 +376,7 @@
   const sportById = Object.fromEntries(SPORTS.map(s=>[s.id,s]));
 
 /* ④ 조별예선 / 본선 토너먼트 하위 구분을 쓰는 종목 (농구 · 3X3 농구) */
-  const STAGE_SPORTS = new Set(["basketball","three","volleyball"]);
+  const STAGE_SPORTS = new Set(["basketball","three","volleyball","badminton"]);
   const STAGES = [
     {id:"group", name:"조별예선"},
     {id:"final", name:"본선 토너먼트"},
@@ -368,7 +386,8 @@
   const STAGE_IDS_BY_SPORT = {
     basketball: ["group","final"],
     three:      ["group","final"],
-    volleyball: ["group","final","league"]
+    volleyball: ["group","final","league"],
+    badminton:  ["group","final","league"]
   };
   function stagesFor(sportId){
     return STAGES.filter(st=>(STAGE_IDS_BY_SPORT[sportId]||["group","final"]).includes(st.id));
@@ -380,7 +399,8 @@
   const DIVISIONS_BY_SPORT = {
     basketball: ["여중 1,2학년", "남중 1,2학년", "여고 1,2학년", "남고 1,2학년"],
     three:      ["여초 5,6학년", "남초 5,6학년", "여중 3학년", "남중 3학년", "여고 3학년", "남고 3학년"],
-    volleyball: ["남중저학년", "남중고학년", "여중저학년", "여중고학년", "남고", "여고"]
+    volleyball: ["남중저학년", "남중고학년", "여중저학년", "여중고학년", "남고", "여고"],
+    badminton:  ["남중저학년", "남중고학년", "여중", "남고"]
   };
   // 단계마다 진행하는 구분이 다른 종목(배구): 조별예선·본선은 조 편성이 있는 종별, 풀리그는 나머지 종별
   const DIVISIONS_BY_STAGE = {
@@ -388,6 +408,11 @@
       group:  ["남중저학년", "여중저학년", "여고"],
       final:  ["남중저학년", "여중저학년", "여고"],
       league: ["남중고학년", "여중고학년", "남고"]
+    },
+    badminton: {
+      group:  ["남중저학년", "남중고학년", "여중"],
+      final:  ["남중저학년", "남중고학년", "여중"],
+      league: ["남고"]
     }
   };
   function divisionsFor(sportId, stage){
@@ -411,6 +436,11 @@
       "남중저학년": ["A","B"],
       "여중저학년": ["A","B"],
       "여고":       ["A","B"]
+    },
+    badminton: {
+      "남중저학년": ["A","B"],
+      "남중고학년": ["A","B"],
+      "여중":       ["A","B"]
     }
   };
   function poolsFor(sportId, division){
@@ -427,6 +457,10 @@
   // 배구는 4강부터 시작합니다.
   const BRACKET_ROUNDS_BY_SPORT = {
     volleyball: [
+      {name:"4강", slots:["4강 1경기","4강 2경기"]},
+      {name:"결승", slots:["결승"]}
+    ],
+    badminton: [
       {name:"4강", slots:["4강 1경기","4강 2경기"]},
       {name:"결승", slots:["결승"]}
     ]
@@ -489,25 +523,92 @@
     ['vb50','남중저학년','final','','4강 2경기','11월 29일(토)','12:40','강명중학교','남중저학년B조 1위팀','남중저학년A조 2위팀'],
     ['vb51','남중저학년','final','','결승','11월 29일(토)','13:20','강명중학교','1경기 승팀','2경기 승팀'],
   ];
-  function volleySeedRecords(){
+
+/* ⑦-1 배드민턴 경기 일정 — "2025 강동송파 올스타 교육장배 학교스포츠클럽대회 일정표(배드민턴).xlsx" 기준.
+   형식은 위 배구와 같습니다. 이 엑셀에는 본선 토너먼트 경기가 없어 조별예선·풀리그만 들어 있습니다.
+   (장소가 비어 있는 줄은 바로 위 줄의 장소를 이어서 씁니다.) */
+  const BADMINTON_SCHEDULE = [
+    ['bd01','남중저학년','group','A','','11월 29일(토)','09:00','오륜중','천일중','위례솔중'],
+    ['bd02','남중저학년','group','B','','11월 29일(토)','09:00','오륜중','가원중','배명중'],
+    ['bd03','남중저학년','group','A','','11월 29일(토)','09:15','오륜중','강명중','한영중'],
+    ['bd04','남중저학년','group','B','','11월 29일(토)','09:15','오륜중','고덕중','문정중'],
+    ['bd05','남중저학년','group','A','','11월 29일(토)','09:30','오륜중','잠신중','천일중'],
+    ['bd06','남중저학년','group','B','','11월 29일(토)','09:30','오륜중','송례중','가원중'],
+    ['bd07','남중저학년','group','A','','11월 29일(토)','09:45','오륜중','위례솔중','강명중'],
+    ['bd08','남중저학년','group','B','','11월 29일(토)','09:45','오륜중','배명중','고덕중'],
+    ['bd09','남중저학년','group','A','','11월 29일(토)','10:00','오륜중','한영중','잠신중'],
+    ['bd10','남중저학년','group','B','','11월 29일(토)','10:00','오륜중','문정중','송례중'],
+    ['bd11','남중저학년','group','A','','11월 29일(토)','10:15','오륜중','천일중','강명중'],
+    ['bd12','남중저학년','group','B','','11월 29일(토)','10:15','오륜중','가원중','고덕중'],
+    ['bd13','남중저학년','group','A','','11월 29일(토)','10:30','오륜중','위례솔중','한영중'],
+    ['bd14','남중저학년','group','B','','11월 29일(토)','10:30','오륜중','배명중','문정중'],
+    ['bd15','남중저학년','group','A','','11월 29일(토)','10:45','오륜중','잠신중','강명중'],
+    ['bd16','남중저학년','group','B','','11월 29일(토)','10:45','오륜중','송례중','고덕중'],
+    ['bd17','남중저학년','group','A','','11월 29일(토)','11:00','오륜중','한영중','천일중'],
+    ['bd18','남중저학년','group','B','','11월 29일(토)','11:00','오륜중','문정중','가원중'],
+    ['bd19','남중저학년','group','A','','11월 29일(토)','11:15','오륜중','위례솔중','잠신중'],
+    ['bd20','남중저학년','group','B','','11월 29일(토)','11:15','오륜중','배명중','송례중'],
+    ['bd21','남중고학년','group','A','','11월 29일(토)','12:00','오륜중','강명중','송례중'],
+    ['bd22','남중고학년','group','B','','11월 29일(토)','12:00','오륜중','오주중','가원중'],
+    ['bd23','남중고학년','group','A','','11월 29일(토)','12:15','오륜중','신명중','신천중'],
+    ['bd24','남중고학년','group','B','','11월 29일(토)','12:15','오륜중','천일중','한산중'],
+    ['bd25','남중고학년','group','A','','11월 29일(토)','12:30','오륜중','강명중','신명중'],
+    ['bd26','남중고학년','group','B','','11월 29일(토)','12:30','오륜중','고덕중','오주중'],
+    ['bd27','남중고학년','group','A','','11월 29일(토)','12:45','오륜중','송례중','신천중'],
+    ['bd28','남중고학년','group','B','','11월 29일(토)','12:45','오륜중','가원중','천일중'],
+    ['bd29','남중고학년','group','A','','11월 29일(토)','13:00','오륜중','강명중','신천중'],
+    ['bd30','남중고학년','group','B','','11월 29일(토)','13:00','오륜중','한산중','고덕중'],
+    ['bd31','남중고학년','group','A','','11월 29일(토)','13:15','오륜중','송례중','신명중'],
+    ['bd32','남중고학년','group','B','','11월 29일(토)','13:15','오륜중','오주중','천일중'],
+    ['bd33','남중고학년','group','B','','11월 29일(토)','13:30','오륜중','가원중','한산중'],
+    ['bd34','남중고학년','group','B','','11월 29일(토)','13:45','오륜중','고덕중','천일중'],
+    ['bd35','남중고학년','group','B','','11월 29일(토)','14:00','오륜중','한산중','오주중'],
+    ['bd36','남중고학년','group','B','','11월 29일(토)','14:15','오륜중','가원중','고덕중'],
+    ['bd37','여중','group','A','','12월 13일(토)','09:00','오륜중','신명중','거원중'],
+    ['bd38','여중','group','B','','12월 13일(토)','09:00','오륜중','성덕여중','오주중'],
+    ['bd39','여중','group','A','','12월 13일(토)','09:15','오륜중','가원중','송례중'],
+    ['bd40','여중','group','B','','12월 13일(토)','09:15','오륜중','천일중','한영중'],
+    ['bd41','여중','group','A','','12월 13일(토)','09:30','오륜중','신명중','가원중'],
+    ['bd42','여중','group','B','','12월 13일(토)','09:30','오륜중','성덕여중','천일중'],
+    ['bd43','여중','group','A','','12월 13일(토)','09:45','오륜중','거원중','송례중'],
+    ['bd44','여중','group','B','','12월 13일(토)','09:45','오륜중','오주중','한영중'],
+    ['bd45','여중','group','A','','12월 13일(토)','10:00','오륜중','신명중','송례중'],
+    ['bd46','여중','group','B','','12월 13일(토)','10:00','오륜중','성덕여중','한영중'],
+    ['bd47','여중','group','A','','12월 13일(토)','10:15','오륜중','거원중','가원중'],
+    ['bd48','여중','group','B','','12월 13일(토)','10:15','오륜중','오주중','천일중'],
+    ['bd49','남고','league','','','12월 2일(화)','17:00','잠일고','문정고','덕수고'],
+    ['bd50','남고','league','','','12월 2일(화)','17:15','잠일고','잠일고','문현고'],
+    ['bd51','남고','league','','','12월 2일(화)','17:30','잠일고','문정고','잠일고'],
+    ['bd52','남고','league','','','12월 2일(화)','17:45','잠일고','덕수고','문현고'],
+    ['bd53','남고','league','','','12월 2일(화)','18:00','잠일고','문정고','문현고'],
+    ['bd54','남고','league','','','12월 2일(화)','18:15','잠일고','덕수고','잠일고'],
+  ];
+
+  const SCHEDULES = [
+    {sport:"volleyball", rows:VOLLEY_SCHEDULE},
+    {sport:"badminton",  rows:BADMINTON_SCHEDULE}
+  ];
+  function seedRecords(sport, rows){
     const rec = {};
-    VOLLEY_SCHEDULE.forEach((r,i)=>{
-      rec[r[0]] = {sport:"volleyball", group:r[1], stage:r[2], pool:r[3], round:r[4],
+    rows.forEach((r,i)=>{
+      rec[r[0]] = {sport:sport, group:r[1], stage:r[2], pool:r[3], round:r[4],
         date:r[5], time:r[6], place:r[7], teamA:r[8], teamB:r[9],
         score:"", winner:"", order:1000+i, ts:Date.now()};
     });
     return rec;
   }
-  // 배구 일정이 비어 있을 때만 채웁니다. (실시간 모드: 번호별로 저장해 여러 명이 동시에 열어도 중복되지 않음)
-  function seedVolleyballIfNeeded(){
-    if(Object.values(matches).some(m=>m && m.sport==="volleyball")) return;
-    const rec = volleySeedRecords();
-    if(fbReady){
-      Object.keys(rec).forEach(k=>{ db.ref("matches/"+k).transaction(cur=> cur || rec[k]); });
-    }else{
-      Object.assign(matches, rec);
-      try{ localStorage.setItem(LS_KEY, JSON.stringify(matches)); }catch(e){}
-    }
+  // 종목별 일정이 비어 있을 때만 채웁니다. (실시간 모드: 번호별로 저장해 여러 명이 동시에 열어도 중복되지 않음)
+  function seedSchedulesIfNeeded(){
+    SCHEDULES.forEach(({sport, rows})=>{
+      if(Object.values(matches).some(m=>m && m.sport===sport)) return;
+      const rec = seedRecords(sport, rows);
+      if(fbReady){
+        Object.keys(rec).forEach(k=>{ db.ref("matches/"+k).transaction(cur=> cur || rec[k]); });
+      }else{
+        Object.assign(matches, rec);
+        try{ localStorage.setItem(LS_KEY, JSON.stringify(matches)); }catch(e){}
+      }
+    });
   }
 
 /* ⑦ 맛보기용 샘플 경기 — 농구 · 조별예선 · 남중 1,2학년 A~F조에 팀명을 "OO중학교"로 채운
@@ -547,7 +648,7 @@
         });
         db.ref("matches").on("value", snap=>{
           matches = snap.val() || {};
-          if(!volleySeeded){ volleySeeded = true; seedVolleyballIfNeeded(); }
+          if(!volleySeeded){ volleySeeded = true; seedSchedulesIfNeeded(); }
           renderAll();
         }, err=>{
           setConn("off","읽기 오류: "+err.code);
@@ -570,7 +671,7 @@
     setConn("off","이 브라우저 저장 모드 (실시간 공유 안 됨)");
     matches = readLS();
     seedIfNeeded();
-    seedVolleyballIfNeeded();
+    seedSchedulesIfNeeded();
     noticeGlobal = readNoticeGlobalLS();
     noticeBySport = readNoticeSportLS();
     window.addEventListener("storage", e=>{
@@ -688,7 +789,7 @@
   }
   function matchesOf(sportId){
     return Object.entries(matches)
-      .filter(([,m])=>m.sport===sportId)
+      .filter(([,m])=>m.sport===sportId && m.stage!=="tiebreak")   // 동률 결정전 기록은 경기 목록에서 제외
       .sort((a,b)=>(a[1].order||0)-(b[1].order||0))
       .map(([id,m])=>[id, resolveMatch(m)]);
   }
@@ -740,6 +841,76 @@
     }
     return rows;
   }
+  /* ---- 배드민턴 조(리그) 순위 ----
+     ① 승점: 승 2점 · 패 1점 (경기 승패는 1~3세트 득점 합산이 높은 팀이 승리)
+     승점이 같으면 ② 총득점(조 경기에서 낸 득점 합) 높은 팀 ③ 세트 득실차 ④ 점수 득실차(득점−실점, 큰 팀 상위)
+     ④까지 같으면 새로운 복식조를 구성해 복식 1경기로 결정(화면에 "동률" 표시 — 결과는 관리자가 확인 후 안내) */
+  // 복식 1경기(동률 결정전) 결과는 경기 목록에 나오지 않는 특수 기록(stage:"tiebreak")으로 저장합니다.
+  function tbId(division, pool){ return "tb_"+division+"_"+(pool||"L"); }
+  function tiebreakRanks(division, pool){
+    const rec = matches[tbId(division, pool)];
+    return (rec && rec.ranks) || null;
+  }
+  function badmintonStandings(matchList, tbRanks){
+    const t = {};
+    const get = n => t[n] || (t[n] = {team:n, g:0, w:0, l:0, pts:0, pf:0, pa:0, sw:0, sl:0});
+    matchList.forEach(m=>{
+      if(m.winner!=="A" && m.winner!=="B") return;
+      const a = get(m.teamA), b = get(m.teamB);
+      const win = m.winner==="A" ? a : b, lose = m.winner==="A" ? b : a;
+      win.g++; lose.g++; win.w++; lose.l++; win.pts += 2; lose.pts += 1;
+      (m.sets||[]).forEach(s=>{
+        if(s.a==="" || s.b==="" || s.a==null || s.b==null) return;
+        const na = Number(s.a), nb = Number(s.b);
+        a.pf += na; a.pa += nb; b.pf += nb; b.pa += na;
+        if(na>nb){ a.sw++; b.sl++; } else if(nb>na){ b.sw++; a.sl++; }
+      });
+    });
+    const rows = Object.values(t);
+    rows.forEach(x=>{
+      x.sd = x.sw - x.sl; x.pd = x.pf - x.pa;
+      x.key = [x.pts, x.pf, x.sd, x.pd].join("|");
+    });
+    rows.sort((x,y)=> (y.pts-x.pts) || (y.pf-x.pf) || (y.sd-x.sd) || (y.pd-x.pd));
+    let rank = 0;
+    rows.forEach((x,i)=>{
+      if(i===0 || x.key!==rows[i-1].key) rank = i+1;
+      x.rank = rank;
+      x.tie = rows.some(y=>y!==x && y.key===x.key);
+    });
+    // 동률 팀들의 복식 1경기 순위가 모두 입력되어 있으면 그 순서로 확정
+    if(tbRanks){
+      const done = new Set();
+      rows.forEach(x=>{
+        if(!x.tie || done.has(x.key)) return;
+        done.add(x.key);
+        const grp = rows.filter(y=>y.key===x.key);
+        const rs = grp.map(y=>Number(tbRanks[y.team]));
+        if(rs.every(r=>r>=1 && r<=grp.length) && new Set(rs).size===grp.length){
+          const base = Math.min(...grp.map(y=>y.rank));
+          grp.forEach(y=>{ y.rank = base + Number(tbRanks[y.team]) - 1; y.tie = false; y.tb = true; });
+        }
+      });
+      rows.sort((x,y)=>x.rank-y.rank);
+    }
+    return rows;
+  }
+  function renderBadmintonStandings(matchList, tbRanks){
+    const rows = badmintonStandings(matchList, tbRanks);
+    if(!rows.length) return "";
+    const anyTie = rows.some(r=>r.tie);
+    return `<div class="table-wrap"><table class="group-table standings">
+      <thead><tr><th>순위</th><th>학교</th><th>경기</th><th>승</th><th>패</th><th>승점</th><th>총득점</th><th>세트득실</th><th>점수득실</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td class="gt-when">${r.rank}${r.tie?"*":""}${r.tb?"†":""}</td>
+        <td style="text-align:left;font-weight:800">${escapeHtml(r.team)}</td>
+        <td class="gt-when">${r.g}</td><td class="gt-when">${r.w}</td><td class="gt-when">${r.l}</td>
+        <td class="gt-when"><b>${r.pts}</b></td><td class="gt-when">${r.pf}</td>
+        <td class="gt-when">${r.sd>0?"+":""}${r.sd}</td><td class="gt-when">${r.pd>0?"+":""}${r.pd}</td>
+      </tr>`).join("")}</tbody></table></div>
+      <div class="standings-note">승 2점 · 패 1점 → 총득점 → 세트 득실차 → 점수 득실차 순${anyTie ? `<br>* 모든 기준이 같은 동률 팀은 새로운 복식조로 복식 1경기를 진행해 순위를 결정합니다.` : ""}${rows.some(r=>r.tb) ? `<br>† 복식 1경기 결과로 순위가 결정되었습니다.` : ""}</div>`;
+  }
+
   function resolveMatch(m){
     if(!m || m.sport!=="volleyball" || m.stage!=="final") return m;
     const r = Object.assign({}, m);
@@ -875,6 +1046,7 @@
         .filter(([,m])=> (m.group||"") === schedDivision)
         .filter(([,m])=> (m.pool||"") === schedPool);
       html += renderGroupTable(list);
+      if(curSport==="badminton") html += renderBadmintonStandings(list.map(([,m])=>m), tiebreakRanks(schedDivision, schedPool));
     }else if(hasStage && schedStage==="league"){
       // 풀리그: 구분(부문) → 표
       html += `<div class="filters" id="divTabs">${divisions.map(d=>
@@ -884,6 +1056,7 @@
         .filter(([,m])=> m.stage === "league")
         .filter(([,m])=> (m.group||"") === schedDivision);
       html += renderGroupTable(list);
+      if(curSport==="badminton") html += renderBadmintonStandings(list.map(([,m])=>m), tiebreakRanks(schedDivision, ""));
     }else if(hasStage){
       // 본선 토너먼트: 구분(부문) → 대진표(농구·3X3은 8강부터, 배구는 4강부터)
       html += `<div class="filters" id="divTabs">${divisions.map(d=>
@@ -1391,6 +1564,59 @@
   }
 
   let admPending = false;
+  /* ---- 배드민턴 동률 결정 복식 1경기 입력 (조/풀리그 순위가 모든 기준에서 동률일 때만 표시) ---- */
+  function tiebreakAdminHtml(list){
+    if(admSelSport!=="badminton" || (admStage!=="group" && admStage!=="league")) return "";
+    const pool = admStage==="group" ? admPool : "";
+    const rows = badmintonStandings(list.map(([,m])=>m), null);
+    const keys = [...new Set(rows.filter(r=>r.tie).map(r=>r.key))];
+    if(!keys.length) return "";
+    const saved = tiebreakRanks(admDivision, pool) || {};
+    return `<div class="adm-row tb-box" data-div="${escapeHtml(admDivision)}" data-pool="${escapeHtml(pool)}">
+      <div class="idx"><span>🏸 동률 순위 결정 복식 1경기</span></div>
+      <div class="tb-desc">승점·총득점·세트 득실차·점수 득실차가 모두 같은 팀입니다. 새로운 복식조로 진행한 복식 1경기 결과에 따라 동률 팀끼리의 순위를 선택하세요.</div>
+      ${keys.map(k=>{
+        const grp = rows.filter(r=>r.key===k);
+        return `<div class="tb-group">
+          <div class="tb-title">동률 팀 (기준 순위 ${grp[0].rank}위)</div>
+          ${grp.map(r=>`<div class="tb-line"><span>${escapeHtml(r.team)}</span>
+            <select class="i-tb" data-team="${escapeHtml(r.team)}" data-n="${grp.length}">
+              <option value="">미정</option>
+              ${grp.map((_,i)=>`<option value="${i+1}" ${Number(saved[r.team])===i+1?"selected":""}>${grp[0].rank+i}위</option>`).join("")}
+            </select></div>`).join("")}
+        </div>`;
+      }).join("")}
+      <div class="adm-actions">
+        <button class="btn tb-save">복식 결과 저장</button>
+        <button class="btn ghost tb-clear">초기화</button>
+      </div>
+    </div>`;
+  }
+  function bindTiebreakAdmin(wrap){
+    const box = wrap.querySelector(".tb-box");
+    if(!box) return;
+    const div = box.dataset.div, pool = box.dataset.pool, id = tbId(div, pool);
+    const write = ranks=>{
+      matches[id] = {sport:"badminton", stage:"tiebreak", group:div, pool:pool, ranks:ranks, ts:Date.now()};
+      persistMatches();
+    };
+    box.querySelector(".tb-save").onclick = ()=>{
+      const ranks = {};
+      let ok = true;
+      box.querySelectorAll(".tb-group").forEach(g=>{
+        const sels = [...g.querySelectorAll(".i-tb")];
+        const vals = sels.map(s=>s.value);
+        if(vals.some(v=>!v) || new Set(vals).size!==vals.length) ok = false;
+        sels.forEach(s=>{ if(s.value) ranks[s.dataset.team] = Number(s.value); });
+      });
+      if(!ok){ alert("동률 팀마다 서로 다른 순위를 모두 선택해 주세요."); return; }
+      write(ranks);
+    };
+    box.querySelector(".tb-clear").onclick = ()=>{
+      if(confirm("복식 1경기 결과를 초기화할까요?")) write({});
+    };
+  }
+
   function renderAdmin(){
     if(admView!=="panel" || !admSelSport || !isAdminFor(admSelSport)) return;
     const wrap = document.getElementById("adminList");
@@ -1424,8 +1650,9 @@
           <button class="btn save">결과 저장</button>
           <button class="btn ghost clear">결과 초기화</button>
         </div>
-      </div>`).join("");
+      </div>`).join("") + tiebreakAdminHtml(list);
 
+    bindTiebreakAdmin(wrap);
     wrap.querySelectorAll(".adm-row").forEach(row=>{
       const id = row.dataset.id;
       const m = resolveMatch(matches[id]);
