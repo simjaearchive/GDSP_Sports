@@ -4,6 +4,19 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>2026학년도 강동송파 교육장배 올스타 학교스포츠클럽대회</title>
+<meta name="description" content="2026학년도 강동송파 교육장배 올스타 학교스포츠클럽대회 경기 일정·조별 순위·결과 실시간 확인" />
+<link rel="icon" type="image/png" href="banner.png" />
+<link rel="apple-touch-icon" href="banner.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="2026학년도 강동송파 교육장배 올스타" />
+<meta property="og:title" content="2026학년도 강동송파 교육장배 올스타 학교스포츠클럽대회" />
+<meta property="og:description" content="2026학년도 경기 일정·조별 순위·결과 실시간 확인" />
+<meta property="og:image" content="https://tlawogur9147.github.io/2026-/banner.png" />
+<meta property="og:url" content="https://tlawogur9147.github.io/2026-/" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="2026학년도 강동송파 교육장배 올스타 학교스포츠클럽대회" />
+<meta name="twitter:description" content="2026학년도 경기 일정·조별 순위·결과 실시간 확인" />
+<meta name="twitter:image" content="https://tlawogur9147.github.io/2026-/banner.png" />
 <style>
   @font-face{
     font-family:'YeogiOttaeJalnan';
@@ -238,8 +251,7 @@
   .adm-teams{font-size:15px;font-weight:800;color:var(--text);margin-top:2px}
   .adm-teams .vs{font-size:11px;color:var(--pending);margin:0 4px}
   .set-grid{display:grid;grid-template-columns:52px 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px}
-  .dodge-grid{display:grid;grid-template-columns:52px 1fr;gap:6px;align-items:center;margin-bottom:8px}
-  .set-grid input,.dodge-grid select{width:100%;padding:8px;border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:8px;font-size:13px;font-weight:600}
+  .set-grid input{width:100%;padding:8px;border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:8px;font-size:13px;font-weight:600}
   .set-lbl{font-size:12px;font-weight:800;color:var(--muted)}
   .lbl.c{text-align:center;font-size:10.5px;color:var(--muted);font-weight:700}
   .res-preview{font-size:12px;color:var(--text);background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:8px}
@@ -329,11 +341,10 @@
     basketball: "1379",
     three:      "1379",
     volleyball: "1379",
-    badminton:  "1379",
-    dodgeball:  "1379"
+    badminton:  "1379"
   };
 
-/* ③ 종목 목록 (3X3 농구 · 배구 · 피구는 전용 아이콘 SVG 사용)
+/* ③ 종목 목록 (3X3 농구 · 배구는 전용 아이콘 SVG 사용)
    같은 아이콘이 홈 화면 카드 / 관리자 종목 칩 / 종목 상세 제목 등
    여러 곳에 동시에 나타날 수 있으므로, clipPath id가 겹치지 않도록
    호출할 때마다 새 id를 발급해서 SVG를 생성한다. */
@@ -354,11 +365,6 @@
     `</g>`,
     `<ellipse cx="23" cy="19" rx="6" ry="3.5" style="fill:#ffffff" opacity=".4"></ellipse><circle cx="32" cy="32" r="29" style="fill:none;stroke:#00000030;stroke-width:1"></circle>`
   );
-  const ICON_DODGE = () => clipCircleSvg(cid =>
-    `<circle cx="32" cy="32" r="29" style="fill:#f7941d"></circle>`+
-    `<g clip-path="url(#${cid})"><rect x="-24" y="23" width="112" height="15" transform="rotate(38 32 32)" style="fill:#1c1c1c"></rect></g>`,
-    `<ellipse cx="21" cy="19" rx="6" ry="3.5" style="fill:#ffffff" opacity=".45"></ellipse><circle cx="32" cy="32" r="29" style="fill:none;stroke:#00000030;stroke-width:1"></circle>`
-  );
   const ICON_SHUTTLE = () => `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M27,50 L15,13 Q19,7 23,13 Q27,7 31,13 Q35,7 39,13 Q43,7 47,13 L37,50 Z" style="fill:#faf8f2;stroke:#cfc7ab;stroke-width:1.2"></path><path d="M23,15 L28,47 M32,14 L32,48 M41,15 L36,47" style="fill:none;stroke:#d8d2bd;stroke-width:1"></path><circle cx="32" cy="52" r="7" style="fill:#efe6d3;stroke:#c9bfa0;stroke-width:1"></circle><rect x="24.5" y="46.5" width="15" height="4.5" rx="1.5" style="fill:#14201a"></rect></svg>`;
   const ICON_VOLLEY = () => clipCircleSvg(cid =>
     `<circle cx="32" cy="32" r="29" style="fill:#f7c123"></circle>`+
@@ -373,8 +379,7 @@
     {id:"basketball", name:"농구",       icon:ICON_BASKETBALL},
     {id:"three",      name:"3X3 농구",   icon:ICON_3X3},
     {id:"volleyball", name:"배구",       icon:ICON_VOLLEY},
-    {id:"badminton",  name:"배드민턴",   icon:ICON_SHUTTLE},
-    {id:"dodgeball",  name:"피구",       icon:ICON_DODGE}
+    {id:"badminton",  name:"배드민턴",   icon:ICON_SHUTTLE}
   ];
   const sportById = Object.fromEntries(SPORTS.map(s=>[s.id,s]));
 
@@ -1440,11 +1445,8 @@
   /* ---- 경기 결과 입력 폼 · 자동 계산 ----
      배구: 1~3세트 점수 → 세트 승패(이긴 팀 1점/진 팀 0점) → 최종 세트 점수(2승 선취 시 승자 확정)
      배드민턴: 1~3세트 점수 → 총 득점(세트 점수 합산) 높은 팀 승 → 동률이면 세트 득실차
-     피구: 1~2세트 승/무/패 → 승점(승 3 · 무 1 · 패 0) 합산 + 내야 총득점
      농구·3X3: 점수(자유 입력) + 승자 */
   const SET_SPORTS = {volleyball:3, badminton:3};
-  const DODGE_SETS = 2;
-  const DODGE_PTS = {W:3, D:1, L:0};
 
   function resultFormHtml(m){
     if(SET_SPORTS[admSelSport]){
@@ -1468,21 +1470,6 @@
       }
       return h;
     }
-    if(admSelSport==="dodgeball"){
-      const sets = m.sets || [];
-      let h = `<div class="dodge-grid">`;
-      for(let i=0;i<DODGE_SETS;i++){
-        const r = (sets[i]||{}).r || "";
-        h += `<span class="set-lbl">${i+1}세트</span><select class="i-dodge">`
-          + `<option value="" ${!r?"selected":""}>미입력</option>`
-          + `<option value="A" ${r==="A"?"selected":""}>${escapeHtml(m.teamA||"팀 A")} 승</option>`
-          + `<option value="B" ${r==="B"?"selected":""}>${escapeHtml(m.teamB||"팀 B")} 승</option>`
-          + `<option value="D" ${r==="D"?"selected":""}>무승부</option></select>`;
-      }
-      h += `</div><div class="adm-in"><div><span class="lbl">${escapeHtml(m.teamA||"팀 A")} 내야 총득점</span><input class="i-inA" type="number" min="0" inputmode="numeric" value="${escapeHtml(m.inA==null?"":m.inA)}"></div>`
-        + `<div><span class="lbl">${escapeHtml(m.teamB||"팀 B")} 내야 총득점</span><input class="i-inB" type="number" min="0" inputmode="numeric" value="${escapeHtml(m.inB==null?"":m.inB)}"></div></div>`;
-      return h;
-    }
     return `<div class="adm-in">
       <div><span class="lbl">점수 (자유 입력, 예: 58:42)</span><input class="i-score" value="${escapeHtml(m.score||"")}"></div>
       <div><span class="lbl">승자</span>
@@ -1501,12 +1488,6 @@
     if(sa.length) f.sets = [...sa].map((el,i)=>({a:el.value.trim(), b:sb[i].value.trim()}));
     const fo = row.querySelector(".i-forfeit");
     if(fo) f.forfeit = fo.value;
-    const dd = row.querySelectorAll(".i-dodge");
-    if(dd.length){
-      f.sets = [...dd].map(el=>({r:el.value}));
-      f.inA = row.querySelector(".i-inA").value.trim();
-      f.inB = row.querySelector(".i-inB").value.trim();
-    }
     const sc = row.querySelector(".i-score");
     if(sc){ f.score = sc.value.trim(); f.winner = row.querySelector(".i-winner").value; }
     return f;
@@ -1525,7 +1506,7 @@
         out.winner = f.forfeit;
         out.score = "기권승";
         out.detail = `기권·몰수 (${f.forfeit==="A"?nameA:nameB} 승 인정 · 세트 2:0 · 점수율 환산 미적용)`;
-        out.store = {sets:sets, forfeit:f.forfeit, inA:"", inB:""};
+        out.store = {sets:sets, forfeit:f.forfeit};
         out.previewHtml = line(`기권·몰수: <b>${f.forfeit==="A"?eA:eB}</b> 승 인정 · 세트 2:0 · 점수율 환산 미적용`);
         return out;
       }
@@ -1560,34 +1541,7 @@
         prev += line(`최종 세트 점수 <b>${wa}:${wb}</b>`
           + (out.winner ? ` · 승리: <b>${out.winner==="A"?eA:eB}</b>` : ` · (2세트 선승 시 승자 확정)`));
       }else prev = line(`세트 점수를 입력하면 자동 계산됩니다.`);
-      out.store = {sets:sets, forfeit:"", inA:"", inB:""};
-      out.previewHtml = prev;
-      return out;
-    }
-    if(sportId==="dodgeball"){
-      const sets = (f.sets||[]).map(s=>({r:s.r||""}));
-      let pa=0, pb=0, played=0, prev="";
-      const detailParts = [];
-      const label = {A:nameA+" 승", B:nameB+" 승", D:"무승부"};
-      sets.forEach((s,i)=>{
-        if(!s.r) return;
-        played++;
-        if(s.r==="A"){ pa+=DODGE_PTS.W; pb+=DODGE_PTS.L; }
-        else if(s.r==="B"){ pb+=DODGE_PTS.W; pa+=DODGE_PTS.L; }
-        else { pa+=DODGE_PTS.D; pb+=DODGE_PTS.D; }
-        detailParts.push(`${i+1}세트 ${label[s.r]}`);
-      });
-      const hasIn = !!(f.inA || f.inB);
-      if(played || hasIn){
-        if(played) out.score = `${pa}:${pb}`;
-        if(played===DODGE_SETS) out.winner = pa>pb ? "A" : (pb>pa ? "B" : "D");
-        out.detail = (played ? `승점 ${pa}:${pb} (${detailParts.join(", ")})` : "")
-          + (hasIn ? `${played?" · ":""}내야 총득점 ${f.inA||0}:${f.inB||0}` : "");
-        prev = line(`승점(승 3 · 무 1 · 패 0): ${eA} <b>${pa}점</b> · ${eB} <b>${pb}점</b>`)
-          + (hasIn ? line(`내야 총득점: ${eA} <b>${f.inA||0}</b> · ${eB} <b>${f.inB||0}</b>`) : "")
-          + (out.winner ? line(`결과: <b>${out.winner==="D" ? "무승부" : (out.winner==="A"?eA:eB)+" 승"}</b>`) : line(`(1·2세트를 모두 입력하면 결과가 확정됩니다)`));
-      }else prev = line(`세트별 승패를 선택하면 승점이 자동 계산됩니다.`);
-      out.store = {sets:sets, inA:f.inA||"", inB:f.inB||""};
+      out.store = {sets:sets, forfeit:""};
       out.previewHtml = prev;
       return out;
     }
@@ -1769,7 +1723,7 @@
       };
       row.querySelector(".clear").onclick = ()=>{
         if(confirm("이 경기의 결과를 초기화할까요?"))
-          updateMatch(id, {score:"", winner:"", detail:"", sets:null, forfeit:"", inA:"", inB:""});
+          updateMatch(id, {score:"", winner:"", detail:"", sets:null, forfeit:""});
       };
     });
   }
