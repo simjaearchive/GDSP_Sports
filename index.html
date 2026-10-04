@@ -130,7 +130,6 @@
 
   /* 종목 선택 홈 */
   .sport-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px}
-  @media(min-width:520px){ .sport-grid{grid-template-columns:repeat(3,1fr)} }
   .sport-card{
     position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;
     padding:18px 10px;text-align:center;cursor:pointer;
@@ -291,6 +290,7 @@
 <div class="wrap">
   <div class="tabs">
     <button data-tab="home" class="active">📅 경기 일정·결과</button>
+    <button data-tab="search">🔍 통합검색</button>
     <button data-tab="admin">🔒 관리자</button>
   </div>
 
@@ -303,6 +303,11 @@
   <section id="tab-home">
     <div id="noticeBoxGlobal" class="notice-box global"></div>
     <div id="homeContent"></div>
+  </section>
+
+  <!-- 전체 종목 통합 검색 -->
+  <section id="tab-search" class="hide">
+    <div id="globalSearchContent"></div>
   </section>
 
   <!-- 관리자 -->
@@ -318,6 +323,7 @@
 <!-- Firebase (실시간 동기화). 미설정 시 자동으로 이 브라우저 저장 모드로 동작합니다. -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
 /* =========================================================================
    ① Firebase 설정  ―  아래 중괄호 안을 본인 프로젝트 값으로 교체하세요.
@@ -334,15 +340,13 @@
     appId: "1:425895078761:web:ab24b2c71e938682766bf8"
   };
 
-/* ② 관리자 비밀번호 (종목별로 다르게 설정할 수 있도록 종목별 맵으로 관리합니다.
-     지금은 요청에 따라 모두 "1379"로 통일. 나중에 종목별로 다르게 바꾸려면
-     아래 값들을 각각 원하는 코드로 바꾸면 됩니다.) */
-  const ADMIN_PW_BY_SPORT = {
-    basketball: "1379",
-    three:      "1379",
-    volleyball: "1379",
-    badminton:  "1379"
-  };
+/* ② 관리자 로그인 — Firebase Authentication(이메일/비밀번호)을 사용합니다.
+     숫자 코드를 JS에서 비교하던 예전 방식과 달리, 로그인 여부를 Realtime Database
+     보안 규칙(auth != null)이 서버 쪽에서 직접 검사하므로 개발자도구로 우회할 수 없습니다.
+     지금은 모든 종목을 관리자 계정 "하나"로 공용 로그인합니다.
+     (나중에 종목별로 비밀번호를 다르게 하고 싶다면, Firebase 콘솔에서 종목별 이메일 계정을
+     추가로 만들고 데이터베이스 규칙에서 종목별 경로마다 auth.token.email을 검사하도록
+     바꾸면 됩니다. README의 "관리자 로그인" 설명을 참고하세요.) */
 
 /* ③ 종목 목록 (3X3 농구 · 배구는 전용 아이콘 SVG 사용)
    같은 아이콘이 홈 화면 카드 / 관리자 종목 칩 / 종목 상세 제목 등
@@ -635,6 +639,8 @@
   let fbReady = false;
   let volleySeeded = false;
   let db = null;
+  let auth = null;
+  let isAdminLoggedIn = false;   // Firebase 이메일/비밀번호 로그인 여부 (관리자 전체 공용 계정)
   const bc = ("BroadcastChannel" in window) ? new BroadcastChannel("kdsp2026_allstar") : null;
   const LS_KEY = "kdsp2026_matches";
   const NOTICE_G_KEY = "kdsp2026_notice_global";
@@ -651,6 +657,15 @@
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
         fbReady = true;
+        auth = firebase.auth();
+        auth.onAuthStateChanged(user=>{
+          isAdminLoggedIn = !!user;
+          admLoginErr = "";
+          admView = isAdminLoggedIn ? "pick" : "login";
+          if(document.getElementById("tab-admin").classList.contains("hide")===false){
+            renderAdminRoot();
+          }
+        });
         db.ref(".info/connected").on("value", s=>{
           setConn(s.val()===true ? "on" : "off", s.val()===true ? "실시간 연결됨" : "재연결 중…");
         });
@@ -976,18 +991,21 @@
   let schedMode = "schedule";  // 'schedule' | 'search'
   let schedSearchQuery = "";   // 검색 탭에 입력한 학교 이름
 
-  let admView = "pick";        // 'pick' | 'pw' | 'panel'
-  let admSelSport = null;      // 관리자 화면에서 선택(또는 인증)된 종목
+  let admView = "login";       // 'login' | 'pick' | 'panel'
+  let admSelSport = null;      // 관리자 화면에서 선택된 종목
+  let admLoginErr = "";        // 로그인 실패 메시지
   let admStage = "group";      // 관리자 화면에서 선택된 조별예선/본선 (농구·3X3 농구 전용)
   let admDivision = null;      // 관리자 화면에서 선택된 세부 구분(부문) (농구·3X3 농구 전용)
   let sedStage = "group", sedDivision = null, sedPool = null, sedMatchId = "";   // 경기 일정 수정 영역의 선택값
   let admPool = "A";          // 관리자 화면에서 선택된 A~F조 (농구·3X3 농구 조별예선 전용)
-  let admPwErr = "";
 
   function renderAll(){
     renderLastUpd();
     renderNoticeGlobal();
     renderHome();
+    if(document.getElementById("tab-search").classList.contains("hide")===false){
+      renderGlobalSearch();
+    }
     if(document.getElementById("tab-admin").classList.contains("hide")===false){
       renderAdminRoot();
     }
@@ -1164,6 +1182,52 @@
     }).join("");
   }
 
+  /* ---- 전체 종목 통합검색 (상단 "🔍 통합검색" 탭) ----
+     학교 이름을 입력하면 농구·3X3 농구·배구·배드민턴 전체에서 그 학교가 나오는 경기를 모아 보여줍니다. */
+  let globalSearchQuery = "";
+  function renderGlobalSearch(){
+    const box = document.getElementById("globalSearchContent");
+    if(!box) return;
+    box.innerHTML = `
+      <div class="sport-title" style="margin-bottom:12px"><span class="emoji-inline">🔍</span> 전체 종목 통합검색</div>
+      <div class="search-box"><input id="globalSearchInput" type="text" placeholder="학교 이름을 입력하세요 (예: 방이중)" value="${escapeHtml(globalSearchQuery)}"></div>
+      <div id="globalSearchResults"></div>
+    `;
+    const si = document.getElementById("globalSearchInput");
+    si.oninput = ()=>{ globalSearchQuery = si.value; renderGlobalSearchResults(); };
+    si.focus();
+    si.setSelectionRange(si.value.length, si.value.length);
+    renderGlobalSearchResults();
+  }
+  function renderGlobalSearchResults(){
+    const wrap = document.getElementById("globalSearchResults");
+    if(!wrap) return;
+    const q = globalSearchQuery.trim();
+    if(!q){
+      wrap.innerHTML = `<div class="empty-msg">학교 이름을 입력하면 모든 종목에서 그 학교가 나오는 경기를 전부 모아서 보여드려요.</div>`;
+      return;
+    }
+    const qLower = q.toLowerCase();
+    const bySport = SPORTS.map(s=>{
+      const hasStage = STAGE_SPORTS.has(s.id);
+      const found = matchesOf(s.id).filter(([,m])=>
+        (m.teamA||"").toLowerCase().includes(qLower) || (m.teamB||"").toLowerCase().includes(qLower)
+      );
+      return {sport:s, found, hasStage};
+    }).filter(x=>x.found.length);
+    if(!bySport.length){
+      wrap.innerHTML = `<div class="empty-msg">"${escapeHtml(q)}" 학교의 경기를 찾을 수 없습니다.</div>`;
+      return;
+    }
+    wrap.innerHTML = bySport.map(({sport, found, hasStage})=>{
+      const cards = found.map(([id,m])=>{
+        const stageName = hasStage ? (STAGES.find(st=>st.id===(m.stage||"group"))||{}).name : null;
+        return matchCard(m, {showDate:true, stageName});
+      }).join("");
+      return `<div class="day"><h2><span class="emoji-inline">${sport.icon()}</span> ${escapeHtml(sport.name)} · ${found.length}경기</h2>${cards}</div>`;
+    }).join("");
+  }
+
   function renderGroupTable(list){
     if(!list.length){
       return `<div class="empty-msg">아직 등록된 경기가 없습니다.<br>관리자 탭에서 경기를 등록해 주세요.</div>`;
@@ -1246,20 +1310,19 @@
   }
 
 /* ================= 관리자 =================
-   흐름: 종목 선택(pick) → 그 종목의 관리자 코드 입력(pw) → 그 종목 전용 관리 화면(panel)
-   종목별로 인증 여부를 따로 기억하므로, 나중에 종목마다 다른 코드를 쓰도록
-   ADMIN_PW_BY_SPORT 값만 바꾸면 됩니다. */
-  function isAdminFor(sportId){ return sessionStorage.getItem("kdsp2026_admin_"+sportId)==="1"; }
-  function setAdminFor(sportId, on){
-    if(on) sessionStorage.setItem("kdsp2026_admin_"+sportId, "1");
-    else sessionStorage.removeItem("kdsp2026_admin_"+sportId);
-  }
-
+   흐름: 관리자 전체 공용 계정으로 이메일 로그인(login) → 종목 선택(pick) → 종목별 관리 화면(panel)
+   로그인 여부는 Firebase Authentication이 관리하며, Realtime Database 보안 규칙에서
+   auth != null 을 검사해 서버 쪽에서도 쓰기 권한을 막으므로 개발자도구로 우회할 수 없습니다. */
   function renderAdminRoot(){
-    if(admView==="pw" && admSelSport && isAdminFor(admSelSport)) admView="panel";
     const root = document.getElementById("adminRoot");
+    if(!fbReady){
+      root.innerHTML = `<div class="admin-lock"><h2>관리자 로그인을 사용할 수 없습니다</h2>
+        <p>실시간 모드(Firebase)가 연결되어야 이메일 로그인을 쓸 수 있습니다. README의 STEP 3을 먼저 진행해 주세요.</p></div>`;
+      return;
+    }
+    if(!isAdminLoggedIn){ root.dataset.shellSport=""; renderAdminLogin(); return; }
+    if(admView==="login") admView="pick";
     if(admView==="pick"){ root.dataset.shellSport=""; renderAdminPick(); return; }
-    if(admView==="pw"){ root.dataset.shellSport=""; renderAdminPw(); return; }
     // panel
     if(root.dataset.shellSport !== admSelSport){
       renderAdminPanelShell();
@@ -1270,65 +1333,65 @@
     }
   }
 
+  function renderAdminLogin(){
+    const root = document.getElementById("adminRoot");
+    root.innerHTML = `
+      <div class="admin-lock">
+        <h2>🔒 관리자 로그인</h2>
+        <p>등록된 관리자 이메일과 비밀번호로 로그인하세요. (모든 종목 공용 계정)</p>
+        <input id="loginEmail" type="email" placeholder="이메일" autocomplete="username" style="letter-spacing:normal;text-align:left" />
+        <input id="loginPw" type="password" placeholder="비밀번호" autocomplete="current-password" style="letter-spacing:normal;text-align:left;margin-top:8px" />
+        <button id="loginBtn" class="btn">로그인</button>
+        <div id="loginErr" class="err">${escapeHtml(admLoginErr)}</div>
+      </div>
+    `;
+    const doLogin = ()=>{
+      const email = document.getElementById("loginEmail").value.trim();
+      const pw = document.getElementById("loginPw").value;
+      if(!email || !pw){
+        admLoginErr = "이메일과 비밀번호를 모두 입력하세요.";
+        document.getElementById("loginErr").textContent = admLoginErr;
+        return;
+      }
+      document.getElementById("loginBtn").disabled = true;
+      auth.signInWithEmailAndPassword(email, pw).catch(()=>{
+        admLoginErr = "로그인 실패: 이메일 또는 비밀번호가 올바르지 않습니다.";
+        document.getElementById("loginErr").textContent = admLoginErr;
+        document.getElementById("loginBtn").disabled = false;
+        document.getElementById("loginPw").value = "";
+        document.getElementById("loginPw").focus();
+      });
+    };
+    document.getElementById("loginBtn").onclick = doLogin;
+    document.getElementById("loginPw").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+    document.getElementById("loginEmail").focus();
+  }
+
   function renderAdminPick(){
     const root = document.getElementById("adminRoot");
     root.innerHTML = `
-      <p style="font-size:13px;color:var(--muted);margin:4px 0 14px">관리할 종목을 선택하세요. 종목마다 관리자 코드를 따로 입력합니다.</p>
-      <div class="sport-grid">${SPORTS.map(s=>{
-        const unlocked = isAdminFor(s.id);
-        return `<div class="sport-card" data-s="${s.id}">
-          <span class="lock">${unlocked ? "🔓" : "🔒"}</span>
+      <div class="adm-bar">
+        <span class="who">✅ 관리자 로그인됨 (${escapeHtml(auth.currentUser ? auth.currentUser.email : "")})</span>
+        <button id="logoutBtn" class="btn ghost">로그아웃</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:4px 0 14px">관리할 종목을 선택하세요.</p>
+      <div class="sport-grid">${SPORTS.map(s=>`<div class="sport-card" data-s="${s.id}">
           <span class="emoji">${s.icon()}</span>
           <div class="nm">${s.name}</div>
-          <div class="cnt">${unlocked ? "인증됨" : "코드 필요"}</div>
-        </div>`;
-      }).join("")}</div>
+        </div>`).join("")}</div>
     `;
+    document.getElementById("logoutBtn").onclick = ()=>{ auth.signOut(); };
     root.querySelectorAll(".sport-card").forEach(c=>{
       c.onclick = ()=>{
         admSelSport = c.dataset.s;
-        admPwErr = "";
         admStage = "group";
         admDivision = null;
         admPool = "A";
         sedStage = "group"; sedDivision = null; sedPool = null; sedMatchId = "";
-        admView = isAdminFor(admSelSport) ? "panel" : "pw";
+        admView = "panel";
         renderAdminRoot();
       };
     });
-  }
-
-  function renderAdminPw(){
-    const root = document.getElementById("adminRoot");
-    const sport = sportById[admSelSport];
-    root.innerHTML = `
-      <button class="back-btn" id="admBack" style="margin-bottom:14px">← 종목 선택</button>
-      <div class="admin-lock">
-        <h2><span class="emoji-inline">${sport.icon()}</span> ${sport.name} 관리자 인증</h2>
-        <p>${sport.name} 공지사항 및 경기 결과를 입력하려면 관리자 코드를 입력하세요.</p>
-        <input id="pwInput" type="password" inputmode="numeric" placeholder="관리자 코드" autocomplete="off" />
-        <button id="pwBtn" class="btn">확인</button>
-        <div id="pwErr" class="err">${escapeHtml(admPwErr)}</div>
-      </div>
-    `;
-    document.getElementById("admBack").onclick = ()=>{ admView="pick"; renderAdminRoot(); };
-    const doCheck = ()=>{
-      const v = document.getElementById("pwInput").value.trim();
-      if(v === ADMIN_PW_BY_SPORT[admSelSport]){
-        setAdminFor(admSelSport, true);
-        admPwErr = "";
-        admView = "panel";
-        renderAdminRoot();
-      }else{
-        admPwErr = "관리자 코드가 올바르지 않습니다.";
-        document.getElementById("pwErr").textContent = admPwErr;
-        document.getElementById("pwInput").value = "";
-        document.getElementById("pwInput").focus();
-      }
-    };
-    document.getElementById("pwBtn").onclick = doCheck;
-    document.getElementById("pwInput").addEventListener("keydown", e=>{ if(e.key==="Enter") doCheck(); });
-    document.getElementById("pwInput").focus();
   }
 
   function syncAdminNoticeInputs(){
@@ -1369,7 +1432,7 @@
       <div class="adm-bar">
         <button class="back-btn" id="admBack">← 종목 선택</button>
         <span class="who">✅ <span class="emoji-inline">${sport.icon()}</span> ${sport.name} 관리자 모드 · 입력 즉시 모든 사용자 화면에 반영됩니다</span>
-        <button id="logoutBtn" class="btn ghost">이 종목 잠금</button>
+        <button id="logoutBtn" class="btn ghost">로그아웃</button>
       </div>
 
       <div class="notice-edit">
@@ -1400,11 +1463,7 @@
     `;
 
     document.getElementById("admBack").onclick = ()=>{ admView="pick"; renderAdminRoot(); };
-    document.getElementById("logoutBtn").onclick = ()=>{
-      setAdminFor(admSelSport, false);
-      admView = "pick";
-      renderAdminRoot();
-    };
+    document.getElementById("logoutBtn").onclick = ()=>{ auth.signOut(); };
     document.getElementById("noticeSave").onclick = ()=>{
       saveNoticeGlobal(document.getElementById("noticeInput").value);
     };
@@ -1554,7 +1613,7 @@
      단계 → 종별 → 조 → 경기 순서로 드롭다운을 골라 경기를 조회한 뒤 날짜·시간·장소·팀명을 수정합니다. */
   function renderScheduleEdit(force){
     const el = document.getElementById("scheduleEdit");
-    if(!el || !admSelSport || !isAdminFor(admSelSport)) return;
+    if(!el || !admSelSport || !isAdminLoggedIn) return;
     if(!force && el.contains(document.activeElement)) return;   // 입력 중에는 다시 그리지 않음
     const sid = admSelSport;
     const hasStage = STAGE_SPORTS.has(sid);
@@ -1672,7 +1731,7 @@
   }
 
   function renderAdmin(){
-    if(admView!=="panel" || !admSelSport || !isAdminFor(admSelSport)) return;
+    if(admView!=="panel" || !admSelSport || !isAdminLoggedIn) return;
     const wrap = document.getElementById("adminList");
     if(!wrap) return;
     const hasStage = STAGE_SPORTS.has(admSelSport);
@@ -1742,10 +1801,11 @@
     b.onclick = ()=>{
       document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
       b.classList.add("active");
-      ["home","admin"].forEach(t=>{
+      ["home","search","admin"].forEach(t=>{
         document.getElementById("tab-"+t).classList.toggle("hide", t!==b.dataset.tab);
       });
       if(b.dataset.tab==="admin") renderAdminRoot();
+      if(b.dataset.tab==="search") renderGlobalSearch();
     };
   });
 
