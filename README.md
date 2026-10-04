@@ -69,7 +69,7 @@
 ### 1-1. 저장소 만들기
 1. [https://github.com](https://github.com) 로그인
 2. 오른쪽 위 **`+` → New repository**
-3. **Repository name** : `2026-` (주소를 `tlawogur9147.github.io/2026-/` 로 쓰려면 저장소 이름을 정확히 `2026-` 로 만들어야 합니다)
+3. **Repository name** : 원하는 이름으로 생성 (예: `GDSP_Sports`) — 저장소 이름이 곧 주소의 뒷부분이 됩니다 (`깃허브계정.github.io/저장소이름/`). 실제 운영 중인 주소는 `https://simjaearchive.github.io/GDSP_Sports/` 입니다.
 4. **Public** 선택, **Add a README file** 체크 해제 → **Create repository**
 
 ### 1-2. 파일 업로드
@@ -83,11 +83,13 @@
 1. 저장소 **Settings → Pages**
 2. **Build and deployment → Source** : `Deploy from a branch`
 3. **Branch** : `main` / 폴더 `/ (root)` → **Save**
-4. 1~2분 뒤 `https://tlawogur9147.github.io/2026-/` 로 접속
+4. 1~2분 뒤 `https://simjaearchive.github.io/GDSP_Sports/` 로 접속
 
 여기까지 하면 **로컬 모드**로 바로 동작합니다. 실시간 공유가 필요하면 STEP 3을 진행하세요.
 
-> 이 주소로 배포하면 카카오톡·문자 등에 링크를 붙여넣었을 때 `banner.png` 이미지와 제목·설명이 함께 보이는 미리보기 카드가 뜹니다(예: "골(Goal) 때리는 런치리그" 사이트처럼). 저장소 이름을 `2026-`가 아닌 다른 이름으로 만들었다면, `index.html`의 `<head>` 안 `og:image`·`og:url`·`twitter:image` 값에 적힌 주소도 실제 주소에 맞게 함께 고쳐야 미리보기가 제대로 보입니다.
+> 이 주소로 배포하면 카카오톡·문자 등에 링크를 붙여넣었을 때 `banner.png` 이미지와 제목·설명이 함께 보이는 미리보기 카드가 뜹니다(예: "골(Goal) 때리는 런치리그" 사이트처럼). `index.html`의 `<head>` 안 `og:image`·`og:url`·`twitter:image` 값은 지금 실제 주소(`https://simjaearchive.github.io/GDSP_Sports/`)에 맞춰져 있습니다 — 혹시 저장소를 다른 계정·이름으로 새로 만들게 되면 이 세 값도 그 실제 주소로 함께 고쳐야 미리보기가 제대로 보입니다.
+>
+> 카카오톡은 한 번 공유한 링크의 미리보기 정보를 캐시해 두기 때문에, 이미지 추가 전에 그 주소를 공유한 적이 있다면 예전 모습이 계속 보일 수 있습니다. 이럴 땐 주소 뒤에 `?v=2`처럼 의미 없는 값을 붙여서 다시 보내면 새 미리보기로 갱신됩니다.
 
 ---
 
@@ -212,4 +214,4 @@ GitHub에서 `index.html` 연필(Edit) 아이콘 → **`① Firebase 설정`** �
 → 상단 표시가 "실시간 연결됨"인지 확인하세요. 로컬 모드에서는 각자 브라우저에만 저장됩니다.
 
 **Q. GitHub Pages 주소가 404예요.**
-→ 1~2분 기다렸다가 새로고침. Settings → Pages에서 Branch가 `main`인지, 저장소 이름이 `2026-` 인지 확인하세요.
+→ 1~2분 기다렸다가 새로고침. Settings → Pages에서 Branch가 `main`인지 확인하세요.
