@@ -401,10 +401,17 @@
     basketball: ["group","final"],
     three:      ["group","final"],
     volleyball: ["group","final","league"],
-    badminton:  ["group","final","league"]
+    badminton:  ["group"]            // 배드민턴은 본선 토너먼트 없이 조별 풀리그로 끝납니다
   };
+  // 종목마다 단계 이름이 다른 경우 (배드민턴: 조별예선 → "풀리그")
+  const STAGE_NAME_BY_SPORT = { badminton: {group:"풀리그"} };
+  function stageLabel(sportId, stageId){
+    const st = STAGES.find(s=>s.id===stageId) || {};
+    return (STAGE_NAME_BY_SPORT[sportId] && STAGE_NAME_BY_SPORT[sportId][stageId]) || st.name;
+  }
   function stagesFor(sportId){
-    return STAGES.filter(st=>(STAGE_IDS_BY_SPORT[sportId]||["group","final"]).includes(st.id));
+    return STAGES.filter(st=>(STAGE_IDS_BY_SPORT[sportId]||["group","final"]).includes(st.id))
+      .map(st=>Object.assign({}, st, {name: stageLabel(sportId, st.id)}));
   }
 
 /* ⑤ 조별예선/본선 토너먼트 하위의 세부 구분(부문) 탭 — 종목별 고정 목록.
@@ -414,7 +421,7 @@
     basketball: ["여중 1,2학년", "남중 1,2학년", "남고 1,2학년"],
     three:      ["남초 5,6학년", "여중 3학년", "남중 3학년", "남고 3학년"],
     volleyball: ["남중저학년", "남중고학년", "여중저학년", "여중고학년", "남고", "여고"],
-    badminton:  ["남중저학년", "남중고학년", "여중", "남고"]
+    badminton:  ["남중저학년", "남중고학년", "여중"]
   };
   // 단계마다 진행하는 구분이 다른 종목(배구): 조별예선은 조 편성이 있는 종별, 본선(4강·결승)은 남중, 풀리그는 여중·남고·여고
   const DIVISIONS_BY_STAGE = {
@@ -424,9 +431,7 @@
       league: ["여중저학년", "여중고학년", "남고", "여고"]
     },
     badminton: {
-      group:  ["남중저학년", "남중고학년", "여중"],
-      final:  ["남중저학년", "남중고학년", "여중"],
-      league: ["남고"]
+      group:  ["남중저학년", "남중고학년", "여중"]
     }
   };
   function divisionsFor(sportId, stage){
@@ -1549,7 +1554,7 @@
       return;
     }
     wrap.innerHTML = found.map(([id,m])=>{
-      const stageName = hasStage ? (STAGES.find(s=>s.id===(m.stage||"group"))||{}).name : null;
+      const stageName = hasStage ? stageLabel(m.sport, m.stage||"group") : null;
       return matchCard(m, {showDate:true, stageName});
     }).join("");
   }
@@ -1593,7 +1598,7 @@
     }
     wrap.innerHTML = bySport.map(({sport, found, hasStage})=>{
       const cards = found.map(([id,m])=>{
-        const stageName = hasStage ? (STAGES.find(st=>st.id===(m.stage||"group"))||{}).name : null;
+        const stageName = hasStage ? stageLabel(m.sport, m.stage||"group") : null;
         return matchCard(m, {showDate:true, stageName});
       }).join("");
       return `<div class="day"><h2><span class="emoji-inline">${sport.icon()}</span> ${escapeHtml(sport.name)} · ${found.length}경기</h2>${cards}</div>`;
@@ -2158,7 +2163,7 @@
     }
     admPending = false;
     if(!list.length){
-      wrap.innerHTML = `<div class="empty-msg">등록된 ${sportById[admSelSport].name}${hasStage ? " · "+STAGES.find(s=>s.id===admStage).name+" · "+admDivision+(admStage==="group"?" · "+admPool+"조":"") : ""} 경기가 없습니다.</div>`;
+      wrap.innerHTML = `<div class="empty-msg">등록된 ${sportById[admSelSport].name}${hasStage ? " · "+stageLabel(admSelSport, admStage)+" · "+admDivision+(admStage==="group"?" · "+admPool+"조":"") : ""} 경기가 없습니다.</div>`;
       return;
     }
     wrap.innerHTML = list.map(([id,m],i)=>`<div class="adm-row" data-id="${id}">
