@@ -1,229 +1,2235 @@
-# 2026학년도 강동송파 교육장배 올스타 학교스포츠클럽대회 · 일정/결과 공유 앱
-
-웹브라우저만 있으면 누구나 **농구 / 3X3 농구 / 배구 / 배드민턴** 4개 종목의
-경기 일정과 결과를 볼 수 있고, **등록된 이메일 계정으로 로그인한 관리자**는 공지사항과 경기 결과를 웹페이지에서 바로 입력할 수 있습니다.
-(경기 일정 자체는 관리자 탭에서 등록하지 않고, 구글 스프레드시트를 참고해 `matches` 데이터로 일괄 등록합니다.)
-
-> 관리자 로그인은 숫자 코드를 입력받는 방식이 아니라 **Firebase Authentication(이메일/비밀번호)** 을 사용합니다.
-> 로그인 여부를 서버(Firebase) 쪽 데이터베이스 보안 규칙이 직접 검사하기 때문에, 브라우저 개발자도구로 코드를 들여다봐도
-> 로그인하지 않은 사람은 결과를 저장할 수 없습니다. 지금은 모든 종목을 관리자 계정 **하나로 공용 로그인**합니다.
-
----
-
-## 1. 구성 파일
-
-| 파일 | 설명 |
-|---|---|
-| `index.html` | 앱 본체 |
-| `banner.png` | 대회 배너 이미지. 브라우저 탭 아이콘(favicon)과 카카오톡·문자 등으로 링크를 공유했을 때 보이는 미리보기 이미지로 쓰입니다. **`index.html`과 같은 폴더에 함께 올려야** 정상적으로 보입니다 |
-| `README.md` | 이 설명서 |
-
-## 2. 기능
-
-* **첫 화면** : 농구·3X3 농구·배구·배드민턴 4개 종목 카드 선택
-* **종목별 화면** : 날짜별 경기 목록, 시간·장소·구분(부문)·라운드, 점수/결과
-  * **농구·3X3 농구**는 그 아래에 **조별예선 / 본선 토너먼트** 탭이 있고, 그 아래에 또 세부 구분 탭이 있습니다.
-    * 농구(5대5): 여중 1,2학년 · 남중 1,2학년 · 남고 1,2학년 (엑셀 `2026 강동송파 교육장배 올스타 학교스포츠클럽대회 경기일정(5대5 농구).xlsx` 기준 52경기가 처음 접속 시 자동 등록됨. 조별예선 일시·장소는 참가교 간 협의 결과, 본선은 "진출교 간 협의", 결승은 오주중학교)
-    * 3X3 농구: 남초 5,6학년 · 여중 3학년 · 남중 3학년 · 남고 3학년 (엑셀 `농구_3X3` 일정표 기준 75경기가 처음 접속 시 자동 등록됨. 남중 3학년=가락중학교, 나머지=문정중학교)
-    * **조별예선**을 선택하면 그 아래에 **조 탭**이 한 번 더 나오고, 그 조의 경기가 **일시 · 장소 · 결과** 3칸짜리 표로 한눈에 보입니다. 결과 칸(팀명·점수)은 크고 굵게, 일시·장소는 작게 표시해서 결과가 가장 눈에 띄도록 했습니다.
-    * **본선 토너먼트**를 선택하면 **8강 토너먼트 대진표**가 나옵니다 — 8강(4경기) → 4강(2경기) → 결승(1경기) 순서로 쌓여 있고, 아직 등록 안 된 자리는 "미정 vs 미정"으로 표시돼서 대진표 모양 자체는 항상 보여요. 각 경기 칸에는 날짜·시간·장소·학교명·결과가 모두 표시됩니다. 예전에 있던 날짜별 "전체" 필터는 대진표로 바뀌면서 없어졌습니다. 폭이 좁은 화면에서도 가로 스크롤 없이 한 줄씩 보이도록 세로로 쌓는 방식이라 휴대폰 세로 화면에서도 잘 보입니다.
-    * 구분(부문)마다 조 개수가 다릅니다 — 지정 안 된 구분은 기본값 A~F조입니다.
-      * 농구: 여중 1,2학년 A~B조 · 남중 1,2학년 A~F조 · 남고 1,2학년 A~C조
-      * 농구 본선 대진: 여중=4강→결승 · 남중·남고=6강→4강→결승 (엑셀의 "준결승"은 앱에서 "4강"으로 표기). "A조 1위", "6강 1경기 승팀" 같은 자리는 조 순위 확정·경기 결과 입력에 따라 학교명으로 자동 표시됩니다.
-      * 농구 조 순위(조별 경기표 아래 표시): 승패가 같은 팀들끼리 → 상대 전적 → 해당 팀들 간 득실 → 해당 팀들 간 다득점 → 조 내 득실 → 조 내 다득점 → 승자 뽑기(관리자 탭 조 화면 맨 아래에서 순위 선택). 득실 계산을 위해 점수는 `팀A점수:팀B점수`(예: 52:48)로 입력하세요.
-      * 3X3 농구: 남초 5,6학년(조 1개 → 조 탭 없음) · 여중 3학년 A~B조 · 남중 3학년 A~F조 · 남고 3학년 A~B조
-      * 3X3 본선 대진: 남초=결승 · 여중·남고=4강→결승 · 남중=6강→4강→결승. "6강 1경기 승팀" 같은 자리는 해당 경기 결과가 입력되면 이긴 학교명으로 자동 표시됩니다.
-      * 3X3 경기 날짜: 모두 11월 28일(토)입니다 (`THREE_DATE_NAMJUNG`·`THREE_DATE_MOONJUNG`). 이미 등록된 뒤에는 관리자 탭의 "경기 일정·장소 수정"에서 고칩니다.
-      * 3X3 조 순위(조별 경기표 아래 표시): 승수 → (승수가 같은 팀들끼리) 상대 전적 → 해당 팀들 간 평균 득점 → 조 내 평균 득점 → 승부 던지기. 평균 득점 계산을 위해 관리자 탭 점수는 `팀A점수:팀B점수`(예: 10:5)로 입력하세요. 조 경기가 모두 끝나 순위가 확정되면 본선 대진표의 "A조 1위" 자리에 학교명이 자동 표시됩니다. 승부 던지기까지 가면 관리자 탭 조 화면 맨 아래 칸에서 동률 팀 순위를 선택해 저장합니다.
-      * `index.html`의 **`⑥ 조별예선 안에서 나뉘는 조`** 부분(`POOLS_BY_DIVISION`)에서 언제든 조 개수를 조정할 수 있습니다.
-  * **배구**는 **조별예선 / 본선 토너먼트 / 풀리그 / 🔍 검색** 탭으로 구성됩니다 (엑셀 `2026 강동송파 올스타 교육장배 학교스포츠클럽대회 경기일정(배구).xlsx` 기준 78경기가 처음 접속 시 자동 등록됨. 예전 일정(51경기)이 등록돼 있으면 **관리자로 로그인한 상태로 접속할 때 새 일정으로 한 번 교체**되며, 이때 예전 일정에 입력한 결과는 사라집니다).
-    * 조별예선: 남중저학년(1~4조) · 여중저학년(1~3조) · 남중고학년(1~4조) · 여중고학년(1~3조) — 조 이름은 엑셀대로 1조·2조…
-    * 본선 토너먼트(4강 → 결승): 남중저학년 · 남중고학년. 여중저학년·여중고학년은 조별예선 뒤 풀리그로 진행합니다.
-    * 본선·풀리그 진출교가 정해지지 않은 경기는 엑셀대로 "미정"으로 표시되니, 확정되면 관리자 탭 "경기 일정·장소 수정"에서 팀명을 고치세요.
-    * 본선 토너먼트 자동 채우기: (해당 문구를 팀명에 쓴 경우) 조별예선이 모두 끝나면 "남중저학년1조 1위팀" 같은 자리에 해당 학교명이 자동 표시되고(조별예선·풀리그 화면의 경기표 아래에 순위표도 함께 표시됩니다. 조 순위 기준: 승점(승 2점·패 1점) → 점수 득실율(득점÷실점) → 세트 득실 → 승자승. 기권·몰수 경기는 관리자 탭의 "기권·몰수" 선택으로 입력하며, 승은 인정하고 세트는 2:0으로 계산하되 점수율 환산에는 넣지 않음), 4강이 끝나면 결승의 "1경기 승팀" 자리에 이긴 학교가 표시됩니다.
-    * 풀리그: 여중저학년 · 여중고학년 · 남고 · 여고
-    * 관리자 탭의 결과 입력도 같은 단계 → 종별 → 조 순서로 경기를 고른 뒤 세트 점수를 입력합니다.
-  * **배드민턴**은 **풀리그 / 🔍 검색** 탭으로 구성됩니다 (본선 토너먼트 없이 조별 풀리그로 끝남. 엑셀 `2026 강동송파 올스타 교육장배 학교스포츠클럽대회 경기일정(배드민턴).xlsx` 기준 63경기 자동 등록. 예전 일정이 등록돼 있으면 관리자 로그인 상태로 접속할 때 새 일정으로 한 번 교체되며, 이때 예전 일정의 결과는 사라집니다). 종별: 남중저학년·남중고학년·여중(각 1~3조).
-    * 배드민턴 경기 승패: 1~3세트 득점을 합산해 높은 팀이 승리.
-    * 배드민턴 조·풀리그 순위(경기 결과가 입력되면 조별 경기표 아래에 순위표가 표시됨): 승점(승 2점·패 1점) → 총득점 → 세트 득실차 → 점수 득실차(득점−실점, 큰 팀이 상위) → 모두 같으면 새로운 복식조로 복식 1경기를 진행해 결정(순위표에 `*` 표시). 복식 1경기 결과는 관리자 탭의 해당 조/풀리그 화면 맨 아래 "🏸 동률 순위 결정 복식 1경기" 칸에서 동률 팀별 순위를 골라 저장하면 순위표에 반영됩니다(`†` 표시). 동률 팀이 없으면 이 칸은 나타나지 않습니다.
-  * 예전에 있던 "OO중학교" 맛보기 샘플 경기는 없앴습니다(로컬 모드에 남아 있던 샘플도 접속 시 자동 삭제).
-  * 모든 종목 화면에는 **🔍 검색** 탭이 있어서, 학교 이름을 입력하면 날짜·단계에 상관없이 그 학교가 나오는 경기를 전부 모아서 보여줍니다.
-* **관리자 탭** : **① 등록된 이메일·비밀번호로 로그인 → ② 관리할 종목 카드 선택** 후
-  * **경기 결과 입력** — 종목별로 입력 방식이 다르며, 입력한 결과는 "경기 일정·결과" 화면에 그대로 반영됩니다. (경기 등록·수정·삭제 기능은 없습니다.)
-    * **배구**: 1~3세트 각 팀 점수 입력 → 세트별로 이긴 팀 1점·진 팀 0점 자동 부여 → 최종 세트 점수 자동 표시(2세트 선승 시 승자 확정)
-    * **배드민턴**: 1~3세트 각 팀 점수 입력 → 총 득점(1~3세트 합산)이 높은 팀 승리, 총 득점이 같으면 세트 득실차, 그것도 같으면 점수 득실차로 판단(1~3세트를 모두 입력하면 결과 확정)
-    * **농구·3X3 농구**: 점수(`팀A:팀B` 형식 권장)와 승자 선택. 조 경기가 끝나 동률이 생기면 3X3와 같이 조 화면 맨 아래에서 승부 던지기 순위를 선택
-* **저장 완료 안내** : 관리자 탭에서 공지·경기 결과를 저장하면 화면 하단에 "✅ 저장 완료"가 표시됩니다 (저장 실패 시에는 오류 경고창)
-  * **공지사항 입력** — **대회 전체 공지사항**(모든 종목 화면 상단에 공통 표시)과 **종목별 공지사항**(선택한 종목 화면에만 표시)을 따로 입력·저장·삭제할 수 있습니다.
-  * 한 번 로그인하면 **모든 종목**을 바로 관리할 수 있습니다(종목별로 따로 로그인할 필요 없음). "← 종목 선택"으로 다른 종목으로 이동하거나, "로그아웃"으로 로그인을 종료할 수 있습니다.
-* 결과·경기 등록/수정 내용은 **모든 접속자 화면에 새로고침 없이 자동 반영** (Firebase 연결 시)
-
-## 3. 두 가지 동작 모드
-
-| 모드 | 조건 | 실시간 공유 | 관리자 로그인 |
-|---|---|---|---|
-| **로컬 모드** (현재 상태) | Firebase 설정 안 함 | ❌ 이 브라우저(기기)에서만 저장 | ❌ 이메일 로그인은 Firebase 연결이 있어야 동작합니다 |
-| **실시간 모드** | Firebase 설정 완료 | ✅ 모든 사람이 같은 결과를 봄 | ✅ 사용 가능 |
-
-> 일정·결과를 보는 것은 로컬 모드에서도 가능하지만, **관리자 로그인(이메일/비밀번호)은 실시간 모드(Firebase 연결)가 되어 있어야** 쓸 수 있습니다.
-> 결과를 입력하려면 **STEP 3까지 반드시 완료**해서 실시간 모드로 바꿔주세요.
-> Firebase는 무료 요금제(Spark)로 충분하며 카드 등록도 필요 없습니다.
-
----
-
-## STEP 1. GitHub에 올리기
-
-### 1-1. 저장소 만들기
-1. [https://github.com](https://github.com) 로그인
-2. 오른쪽 위 **`+` → New repository**
-3. **Repository name** : 원하는 이름으로 생성 (예: `GDSP_Sports`) — 저장소 이름이 곧 주소의 뒷부분이 됩니다 (`깃허브계정.github.io/저장소이름/`). 실제 운영 중인 주소는 `https://simjaearchive.github.io/GDSP_Sports/` 입니다.
-4. **Public** 선택, **Add a README file** 체크 해제 → **Create repository**
-
-### 1-2. 파일 업로드
-1. 저장소 화면에서 **`Add file` → `Upload files`**
-2. `index.html`, `banner.png`, `README.md` 를 드래그해서 올리고 **Commit changes** (`banner.png`를 빼먹으면 탭 아이콘과 링크 공유 미리보기 이미지가 보이지 않습니다)
-3. 이후 수정도 같은 방식(Upload files 또는 연필 아이콘 → Commit)으로 덮어쓰면 됩니다.
-
----
-
-## STEP 2. GitHub Pages로 주소 만들기
-1. 저장소 **Settings → Pages**
-2. **Build and deployment → Source** : `Deploy from a branch`
-3. **Branch** : `main` / 폴더 `/ (root)` → **Save**
-4. 1~2분 뒤 `https://simjaearchive.github.io/GDSP_Sports/` 로 접속
-
-여기까지 하면 **로컬 모드**로 바로 동작합니다. 실시간 공유가 필요하면 STEP 3을 진행하세요.
-
-> 이 주소로 배포하면 카카오톡·문자 등에 링크를 붙여넣었을 때 `banner.png` 이미지와 제목·설명이 함께 보이는 미리보기 카드가 뜹니다(예: "골(Goal) 때리는 런치리그" 사이트처럼). `index.html`의 `<head>` 안 `og:image`·`og:url`·`twitter:image` 값은 지금 실제 주소(`https://simjaearchive.github.io/GDSP_Sports/`)에 맞춰져 있습니다 — 혹시 저장소를 다른 계정·이름으로 새로 만들게 되면 이 세 값도 그 실제 주소로 함께 고쳐야 미리보기가 제대로 보입니다.
->
-> 카카오톡은 한 번 공유한 링크의 미리보기 정보를 캐시해 두기 때문에, 이미지 추가 전에 그 주소를 공유한 적이 있다면 예전 모습이 계속 보일 수 있습니다. 이럴 땐 주소 뒤에 `?v=2`처럼 의미 없는 값을 붙여서 다시 보내면 새 미리보기로 갱신됩니다.
-
----
-
-## STEP 3. Firebase 실시간 데이터베이스 연결 (선택)
-
-### 3-1. 프로젝트 만들기
-[https://console.firebase.google.com](https://console.firebase.google.com) → **프로젝트 만들기** (예: `kdsp-allstar-2026`) → 애널리틱스는 사용 안 함
-
-### 3-2. Realtime Database 만들기
-왼쪽 메뉴 **빌드 → Realtime Database → 데이터베이스 만들기** → 위치는 **싱가포르(asia-southeast1)** 권장 → **테스트 모드로 시작**
-
-### 3-3. 관리자 로그인(이메일/비밀번호) 활성화
-1. 왼쪽 메뉴 **빌드 → Authentication → 시작하기(Get started)**
-2. **Sign-in method** 탭 → **이메일/비밀번호(Email/Password)** 선택 → **사용 설정(Enable)** → **저장**
-3. **Users** 탭 → **사용자 추가(Add user)** → 관리자로 쓸 **이메일 주소**와 **비밀번호**를 입력 → 추가
-   (이 계정 하나가 모든 종목의 공용 관리자 로그인입니다. 나중에 같은 화면에서 비밀번호 재설정·계정 삭제·추가 계정 생성도 할 수 있습니다.)
-
-### 3-4. 보안 규칙 설정
-**Realtime Database → 규칙(Rules)** 탭에 아래 내용을 붙여넣고 **게시**.
-`auth != null` 조건 덕분에, 3-3에서 로그인한 사람만 쓰기(`write`)가 가능하고 — 로그인하지 않은 사람은
-개발자도구로 아무리 시도해도 Firebase 서버가 요청을 거부합니다. 일정·결과를 보는 것은 누구나 가능하도록 읽기(`read`)는 그대로 열어둡니다.
-
-```json
-{
-  "rules": {
-    "matches": { ".read": true, ".write": "auth != null" },
-    "noticeGlobal": { ".read": true, ".write": "auth != null" },
-    "noticeBySport": { ".read": true, ".write": "auth != null" }
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>2026학년도 강동송파 교육장배 올스타 학교스포츠클럽대회</title>
+<meta name="description" content="2026학년도 강동송파 교육장배 올스타 학교스포츠클럽대회 경기 일정·조별 순위·결과 실시간 확인" />
+<link rel="icon" type="image/png" href="banner.png" />
+<link rel="apple-touch-icon" href="banner.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="2026학년도 강동송파 교육장배 올스타" />
+<meta property="og:title" content="2026학년도 강동송파 교육장배 올스타 학교스포츠클럽대회" />
+<meta property="og:description" content="2026학년도 경기 일정·조별 순위·결과 실시간 확인" />
+<meta property="og:image" content="https://simjaearchive.github.io/GDSP_Sports/banner.png" />
+<meta property="og:url" content="https://simjaearchive.github.io/GDSP_Sports/" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="2026학년도 강동송파 교육장배 올스타 학교스포츠클럽대회" />
+<meta name="twitter:description" content="2026학년도 경기 일정·조별 순위·결과 실시간 확인" />
+<meta name="twitter:image" content="https://simjaearchive.github.io/GDSP_Sports/banner.png" />
+<style>
+  @font-face{
+    font-family:'YeogiOttaeJalnan';
+    src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_four@1.2/JalnanOTF00.woff') format('woff');
+    font-weight:normal; font-style:normal; font-display:swap;
   }
-}
-```
+  :root{
+    --bg:#0a0e16; --card:#141a27; --card2:#1a2233;
+    --line:#232c3f; --line2:#2c3750;
+    --text:#f2f4f8; --muted:#8b93a6;
+    --accent:#e4265f; --accent2:#ff4778; --accent-soft:rgba(228,38,95,.18);
+    --win:#22c55e; --win-soft:rgba(34,197,94,.16);
+    --draw:#f5b301; --draw-soft:rgba(245,179,1,.16);
+    --pending:#4b5468; --err:#ff5470; --gold:#f5b301;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","맑은 고딕",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  header{
+    position:relative;overflow:hidden;
+    background:var(--bg);
+    color:var(--text); padding:22px 16px 16px; text-align:left;
+    border-bottom:1px solid var(--line);
+  }
+  header::before{
+    content:"";position:absolute;top:-70px;right:-60px;width:240px;height:240px;
+    background:radial-gradient(circle,var(--accent) 0%,transparent 70%);opacity:.28;pointer-events:none
+  }
+  header h1{
+    position:relative;margin:0;font-family:'YeogiOttaeJalnan',-apple-system,"Malgun Gothic","맑은 고딕",sans-serif;
+    font-size:24px;line-height:1.5;letter-spacing:-.3px;color:var(--text)
+  }
+  header h1 .pt{color:var(--accent)}
+  header .status{position:relative;font-size:11px;margin-top:10px;color:var(--muted)}
+  @media(min-width:600px){
+    header{padding:30px 16px 20px}
+    header h1{font-size:34px}
+  }
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pending);vertical-align:middle;margin-right:5px}
+  .dot.on{background:#33d17a;box-shadow:0 0 6px #33d17a}
+  .dot.off{background:var(--err)}
 
-> 대회가 끝난 뒤에는 `.write` 값을 모두 `false` 로 바꿔 로그인한 사람도 더는 결과를 바꾸지 못하도록 잠그는 것을 권장합니다.
+  .wrap{max-width:960px;margin:0 auto;padding:14px 12px 60px}
 
-### 3-5. 웹 앱 등록 후 설정값 복사
-**프로젝트 설정(톱니바퀴) → 내 앱 → 웹 아이콘 `</>`** → 앱 등록(호스팅 체크 불필요) → 아래 값 복사
+  .emoji svg, .emoji-inline svg{width:1em;height:1em;vertical-align:-0.15em}
 
-```js
-const firebaseConfig = {
-  apiKey: "AIza............",
-  authDomain: "kdsp-allstar-2026.firebaseapp.com",
-  databaseURL: "https://kdsp-allstar-2026-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "kdsp-allstar-2026",
-  storageBucket: "kdsp-allstar-2026.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef......"
-};
-```
+  .tabs{
+    display:flex;gap:6px;position:sticky;top:0;z-index:20;
+    background:var(--bg);padding:10px 0;margin-bottom:6px;
+  }
+  .tabs button{
+    flex:1;padding:11px 6px;border:1px solid var(--line);background:var(--card);
+    border-radius:10px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;
+  }
+  .tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 6px 16px rgba(228,38,95,.35)}
 
-> `databaseURL` 이 안 보이면 3-2(Realtime Database 만들기)를 먼저 하세요.
+  .banner{
+    background:rgba(245,179,1,.12);border:1px solid rgba(245,179,1,.4);color:#f5c518;
+    padding:9px 12px;border-radius:10px;font-size:12px;margin-bottom:10px;
+  }
 
-### 3-6. index.html에 붙여넣기
-GitHub에서 `index.html` 연필(Edit) 아이콘 → **`① Firebase 설정`** 부분의 `firebaseConfig` 를 위 값으로 교체 → **Commit changes**
-1~2분 뒤 Pages 주소를 새로고침하면 상단이 **"실시간 연결됨"** 으로 바뀌고, 관리자 탭에서 3-3에서 만든 이메일로 로그인할 수 있습니다.
+  .notice-box{
+    background:var(--card);border:1px solid var(--line);border-left:5px solid var(--accent);
+    border-radius:10px;padding:7px 11px;margin-bottom:8px;
+  }
+  .notice-box.sport{border-left-color:var(--gold);margin-top:6px}
+  .notice-box h3{
+    margin:0 0 4px;font-size:13.5px;color:var(--text);font-weight:800;
+    display:flex;align-items:center;gap:5px
+  }
+  .notice-box .notice-body{
+    font-size:12.5px;line-height:1.45;color:var(--text);white-space:pre-wrap;word-break:break-word;
+  }
+  .notice-box .empty{font-size:12px;color:var(--muted)}
 
----
+  .notice-edit{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:12px;margin-bottom:12px
+  }
+  .notice-edit label{display:block;font-size:13px;font-weight:800;color:var(--text);margin-bottom:7px}
+  .notice-edit textarea{
+    width:100%;border:1px solid var(--line);background:var(--card2);border-radius:9px;padding:10px;
+    font-size:14px;font-family:inherit;line-height:1.5;resize:vertical;color:var(--text)
+  }
 
-## STEP 4. 사용 방법
+  .filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .filters button{
+    padding:6px 11px;border:1px solid var(--line);background:var(--card);border-radius:999px;
+    font-size:12px;color:var(--muted);cursor:pointer;font-weight:600
+  }
+  .filters button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-### 일반 사용자
-* Pages 주소를 열고 종목 카드를 선택하면 해당 종목 일정/결과가 보입니다. 로그인 불필요.
-* 결과가 입력되는 즉시 화면이 자동으로 바뀝니다 (실시간 모드일 때).
+  .stage-tabs{display:flex;gap:8px;margin-bottom:12px}
+  .stage-tabs button{
+    flex:1;padding:10px 8px;border:1px solid var(--line);background:var(--card);
+    border-radius:10px;font-size:13px;font-weight:800;color:var(--muted);cursor:pointer;
+  }
+  /* 탭 글자가 줄바꿈되지 않도록: 한 줄 고정 + 화면 폭에 맞춰 글자 크기 조정 */
+  .stage-tabs{gap:5px}
+  .stage-tabs button, .tabs button{
+    min-width:0;white-space:nowrap;overflow:hidden;text-overflow:clip;
+    padding-left:3px;padding-right:3px;font-size:clamp(9.5px,3vw,13px)
+  }
+  @media(min-width:520px){
+    .stage-tabs{gap:8px}
+    .stage-tabs button, .tabs button{font-size:13px}
+  }
+  .stage-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 4px 12px rgba(228,38,95,.3)}
 
-### 관리자
-1. **관리자** 탭 → **이메일·비밀번호 입력** → **로그인** (3-3에서 Firebase에 등록한 관리자 계정)
-2. 로그인되면 바로 **관리할 종목 카드를 선택** (🏀🏸🏐 등) — 모든 종목이 한 번에 열립니다.
-3. 목록에서 해당 경기를 찾아 종목별 결과 칸(세트 점수 등)을 입력하면 아래에 자동 계산 결과가 미리 보이고, **결과 저장**을 누르면 모든 화면에 반영됩니다. (농구·3X3 농구는 단계/구분/조 탭으로 경기를 찾습니다)
-4. **경기 일정·장소 수정**: 관리자 화면 맨 아래 "🗓️ 경기 일정·장소 수정"에서 단계 → 종별 → 조 → 경기 순으로 드롭다운을 골라 경기를 조회한 뒤 날짜·시간·장소·팀명을 고치고 **일정 수정 저장**을 누릅니다(단계 구분이 없는 종목은 경기 드롭다운만 나옵니다). 모든 종목 관리자 화면에 있습니다.
-5. 잘못 입력했다면 **결과 초기화**로 되돌릴 수 있습니다.
-6. **대회 전체 공지사항** 칸에 적고 **전체 공지 저장**을 누르면 모든 종목 화면 상단에 표시됩니다.
-7. 특정 종목에만 보여줄 안내라면 그 아래 **종목별 공지사항** 칸에 적고 **종목 공지 저장**을 누르세요. 해당 종목 화면에만 표시됩니다.
-8. 다른 종목을 관리하려면 **"← 종목 선택"**, 작업이 끝났으면 **"로그아웃"**을 누르세요(공용 PC에서는 꼭 로그아웃하세요).
+  /* 종목 선택 홈 */
+  .sport-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px}
+  .sport-card{
+    position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px 10px;text-align:center;cursor:pointer;
+  }
+  .sport-card .emoji{font-size:34px;display:block;margin-bottom:8px}
+  .sport-card .nm{font-size:14.5px;font-weight:800;color:var(--text)}
+  .sport-card .cnt{font-size:11.5px;color:var(--muted);margin-top:4px}
+  .sport-card .lock{position:absolute;top:10px;right:12px;font-size:13px}
+  .sport-card:active{transform:scale(.98)}
 
----
+  .back-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .back-btn{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;font-weight:700;color:var(--accent2);cursor:pointer}
+  .sport-title{
+    font-size:23px;font-weight:800;display:flex;align-items:center;gap:8px;color:var(--text);
+    font-family:'YeogiOttaeJalnan',-apple-system,"Malgun Gothic","맑은 고딕",sans-serif;letter-spacing:-.2px
+  }
+  @media(min-width:600px){ .sport-title{font-size:28px} }
 
-## 종목별 2차 비밀번호
-Firebase 로그인 후 종목 카드를 누르면 해당 종목의 관리자 비밀번호를 한 번 더 묻습니다(로그아웃 전까지 유지).
-배구·배드민턴·농구(3X3 농구와 공용) 비밀번호는 `index.html`의 `SPORT_CODES` 에서 바꿉니다.
-이 확인은 화면 단 확인이며, 실제 저장 권한은 Firebase 로그인으로만 통제됩니다.
+  .search-box{margin-bottom:14px}
+  .search-box input{
+    width:100%;padding:12px 14px;border:1px solid var(--line);background:var(--card);color:var(--text);
+    border-radius:10px;font-size:15px;font-family:inherit
+  }
 
-## 보안 안내
-* 관리자 로그인은 **Firebase Authentication(이메일/비밀번호)** 으로 처리되며, Realtime Database 보안 규칙이
-  `auth != null` 을 서버에서 직접 검사합니다 — 로그인하지 않은 사람은 브라우저 개발자도구로도 결과를 저장할 수 없습니다.
-* 그래도 비밀번호 자체의 보안은 일반적인 계정 보안 수칙을 따릅니다 — 추측하기 쉬운 비밀번호를 피하고, 다른 사이트와 같은 비밀번호를 쓰지 마세요.
-* 대회 기간 중에는 큰 문제가 없지만, 더 엄격하게 하려면 대회 종료 후 Firebase 규칙의 `.write` 를 `false` 로 바꾸세요.
-* 개인정보는 저장되지 않으며, 팀명·일정·점수 등 대회 진행 정보만 저장됩니다. (관리자 로그인 이메일은 Firebase Authentication 안에만 보관됩니다.)
+  /* 조별예선 표 */
+  .table-wrap{overflow-x:auto;margin-bottom:14px;border-radius:12px}
+  .group-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px}
+  .group-table th{
+    background:var(--card2);color:var(--muted);font-size:10.5px;font-weight:700;
+    text-align:center;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap
+  }
+  .group-table td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+  .group-table tr:last-child td{border-bottom:none}
+  .gt-when, .gt-where{font-size:11px;color:var(--muted);white-space:nowrap;text-align:center}
+  .gt-result{min-width:190px}
+  .gt-teams{display:flex;align-items:center;justify-content:center;gap:8px}
+  .gt-teams .team-name{flex:1;text-align:center;font-size:15px;font-weight:800;color:var(--text);letter-spacing:-.2px}
+  .gt-teams .team-name.win{color:var(--win)}
+  .gt-teams .team-name.draw{color:var(--draw)}
+  .gt-score{font-weight:900;font-size:19px;color:var(--accent2);letter-spacing:.3px;white-space:nowrap}
+  .gt-vs{font-size:11px;color:var(--pending);font-weight:700}
+  .gt-status{display:block;text-align:center;font-size:10px;margin-top:4px;color:var(--muted)}
 
-## 관리자 계정 관리 (비밀번호 변경 · 계정 추가, 나중에 종목별로 분리하기)
-관리자 이메일/비밀번호는 `index.html` 코드가 아니라 **Firebase 콘솔**에서 관리합니다.
+  /* 본선 토너먼트 대진표 */
+  .bracket-round{margin-bottom:6px}
+  .bracket-round h3{
+    font-size:13px;font-weight:800;color:#fff;background:var(--accent);
+    display:inline-block;padding:5px 16px;border-radius:999px;margin:0 0 10px
+  }
+  .bracket-arrow{text-align:center;color:var(--accent2);font-size:20px;line-height:1;margin:0 0 10px;opacity:.75}
+  .match.bracket-empty{border-style:dashed;opacity:.5}
+  .match.bracket-empty .team{color:var(--muted)}
 
-* **비밀번호를 바꾸고 싶다면**: Firebase 콘솔 → **Authentication → Users** → 해당 계정의 **⋮ 메뉴 → 비밀번호 재설정 이메일 보내기**(또는 계정을 삭제하고 새 비밀번호로 다시 추가)
-* **로그인 계정을 추가하고 싶다면**: 같은 화면에서 **사용자 추가(Add user)** 로 이메일을 더 등록하면, 그 이메일·비밀번호로도 로그인할 수 있습니다 (지금 구조에서는 추가 계정도 전체 종목에 접근합니다).
-* **나중에 종목마다 다른 비밀번호를 쓰고 싶다면**: 종목 수만큼 Firebase 계정을 따로 만든 뒤, Realtime Database 규칙을 아래처럼 종목별 경로마다 `auth.token.email` 을 검사하도록 바꾸면 됩니다.
+  .day{margin-bottom:18px}
+  .day h2{
+    font-size:14px;margin:0 0 8px;padding:7px 10px;background:var(--accent);color:#fff;border-radius:8px
+  }
+  .match{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:10px 12px;margin-bottom:8px;
+  }
+  .match .meta{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--muted);margin-bottom:7px;flex-wrap:wrap}
+  .badge{background:rgba(255,255,255,.06);border-radius:6px;padding:2px 7px;font-weight:700;color:var(--muted)}
+  .badge.round{background:var(--accent-soft);color:var(--accent2)}
+  .badge.done{background:var(--win-soft);color:var(--win)}
+  .row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+  .team{font-size:15px;font-weight:800;color:var(--text);letter-spacing:-.2px}
+  .team.right{text-align:right}
+  .team.win{color:var(--win);font-weight:800}
+  .team.draw{color:var(--draw);font-weight:800}
+  .score{font-size:15px;font-weight:800;letter-spacing:.3px;min-width:64px;text-align:center;color:var(--text)}
+  .score .vs{font-size:12px;color:var(--muted);font-weight:700}
+  .place{font-size:11px;color:var(--muted);margin-top:6px}
 
-  ```json
-  {
-    "rules": {
-      "matches": {
-        "$matchId": {
-          ".read": true,
-          ".write": "auth != null && (
-            (data.child('sport').val() === 'basketball' && auth.token.email === 'basketball-admin@example.com') ||
-            (data.child('sport').val() === 'volleyball' && auth.token.email === 'volleyball-admin@example.com')
-          )"
+  /* admin */
+  .admin-lock{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;text-align:center;max-width:340px;margin:20px auto}
+  .admin-lock h2{margin:0 0 6px;font-size:15px;color:var(--text)}
+  .admin-lock p{font-size:12px;color:var(--muted);margin:0 0 14px}
+  .admin-lock input{width:100%;padding:11px;border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:9px;font-size:15px;text-align:center;letter-spacing:2px}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer}
+  .btn.red{background:var(--err)}
+  .btn.ghost{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+  .btn:disabled{opacity:.5}
+  .admin-lock .btn{width:100%;margin-top:10px}
+  .err{color:var(--err);font-size:12px;margin-top:8px;min-height:16px}
+  ::placeholder{color:var(--muted);opacity:1}
+
+  .adm-bar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap}
+  .adm-bar .who{font-size:12px;color:var(--muted)}
+
+  .add-form{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px}
+  .add-form h3{margin:0 0 10px;font-size:13.5px;color:var(--text);font-weight:800}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid1{margin-top:8px}
+  .add-form input, .add-form select{
+    width:100%;padding:9px 8px;border:1px solid var(--line);background:var(--card2);color:var(--text);
+    border-radius:8px;font-size:13.5px;font-family:inherit;margin-top:6px
+  }
+  .add-form label{font-size:11px;color:var(--muted);font-weight:700}
+  .add-form .btn{width:100%;margin-top:10px}
+
+  .adm-row{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .adm-row .idx{font-size:11px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+  .adm-row .movebtns{display:flex;gap:4px}
+  .adm-row .movebtns button{border:1px solid var(--line);background:var(--card2);border-radius:6px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--muted)}
+  .adm-in{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .adm-in.full{grid-template-columns:1fr}
+  .adm-in input, .adm-in select{
+    width:100%;padding:8px;border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:8px;font-size:13px;font-weight:600
+  }
+  .adm-in .lbl{font-size:10.5px;color:var(--muted);font-weight:700;margin-bottom:2px;display:block}
+  .adm-actions{display:flex;gap:6px;margin-top:8px}
+  .adm-actions .btn{flex:1;padding:9px;font-size:12.5px}
+  .saved-tag{font-size:11px;color:var(--win);font-weight:700}
+
+  .adm-info{margin-bottom:8px}
+  .adm-when{font-size:11px;color:var(--muted)}
+  .adm-teams{font-size:15px;font-weight:800;color:var(--text);margin-top:2px}
+  .adm-teams .vs{font-size:11px;color:var(--pending);margin:0 4px}
+  .set-grid{display:grid;grid-template-columns:52px 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px}
+  .set-grid input{width:100%;padding:8px;border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:8px;font-size:13px;font-weight:600}
+  .set-lbl{font-size:12px;font-weight:800;color:var(--muted)}
+  .lbl.c{text-align:center;font-size:10.5px;color:var(--muted);font-weight:700}
+  .res-preview{font-size:12px;color:var(--text);background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:8px}
+  .res-preview:empty{display:none}
+  .res-preview div+div{margin-top:3px}
+  #saveModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
+  .save-dialog{background:var(--card);border:1px solid var(--line2);border-radius:16px;padding:26px 22px 20px;width:100%;max-width:320px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+  .save-ico{font-size:40px;line-height:1}
+  .save-msg{font-size:16px;font-weight:800;color:var(--text);margin:12px 0 18px}
+  .save-dialog .btn{width:100%}
+  .standings th,.standings td{padding-left:4px;padding-right:4px}
+  .sched-edit{margin-top:18px;border-color:var(--accent)}
+  .sched-edit select{width:100%;padding:9px 8px;border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:8px;font-size:13.5px;font-family:inherit;margin-top:6px}
+  .se-form{margin-top:12px;padding-top:4px;border-top:1px dashed var(--line2)}
+  .tb-box{border-color:var(--gold)}
+  .tb-desc{font-size:11.5px;color:var(--muted);margin-bottom:8px}
+  .tb-group{background:var(--card2);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+  .tb-title{font-size:11px;font-weight:800;color:var(--gold);margin-bottom:6px}
+  .tb-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px;font-weight:800;font-size:14px}
+  .tb-line select{padding:6px 8px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;font-size:13px}
+  .standings-note{font-size:11px;color:var(--muted);margin:-6px 0 14px}
+  .gt-detail,.detail{display:block;text-align:center;font-size:10.5px;color:var(--muted);margin-top:3px}
+  .detail{margin-top:6px;text-align:left}
+
+  footer{text-align:center;font-size:11px;color:var(--muted);padding:18px 10px 8px}
+  .hide{display:none}
+  a{color:var(--accent2)}
+  .empty-msg{color:var(--muted);font-size:13px;text-align:center;padding:30px 10px}
+</style>
+</head>
+<body>
+<header>
+  <h1>2026학년도 <span class="pt">강동송파</span> 교육장배<br><span class="pt">올스타</span> 학교스포츠클럽대회</h1>
+  <div class="status"><span id="connDot" class="dot"></span><span id="connText">연결 확인 중…</span> · <span id="lastUpd">—</span></div>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button data-tab="home" class="active">📅 경기 일정·결과</button>
+    <button data-tab="search">🔍 통합검색</button>
+    <button data-tab="admin">🔒 관리자</button>
+  </div>
+
+  <div id="offlineBanner" class="banner hide">
+    ⚠️ <b>Firebase가 아직 연결되지 않았습니다.</b> 지금은 이 브라우저(기기)에서만 결과가 저장됩니다.
+    여러 사람과 실시간으로 공유하려면 코드 상단의 firebaseConfig 값을 채워주세요.
+  </div>
+
+  <!-- 홈 / 종목별 화면 -->
+  <section id="tab-home">
+    <div id="noticeBoxGlobal" class="notice-box global"></div>
+    <div id="homeContent"></div>
+  </section>
+
+  <!-- 전체 종목 통합 검색 -->
+  <section id="tab-search" class="hide">
+    <div id="globalSearchContent"></div>
+  </section>
+
+  <!-- 관리자 -->
+  <section id="tab-admin" class="hide">
+    <div id="adminRoot"></div>
+  </section>
+
+  <footer>
+    결과·일정은 관리자가 입력하며, 사용자 화면은 새로고침 없이 자동 갱신됩니다.
+  </footer>
+</div>
+
+<!-- Firebase (실시간 동기화). 미설정 시 자동으로 이 브라우저 저장 모드로 동작합니다. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script>
+/* =========================================================================
+   ① Firebase 설정  ―  아래 중괄호 안을 본인 프로젝트 값으로 교체하세요.
+      (Firebase 콘솔 → 프로젝트 설정 → 내 앱 → SDK 설정 및 구성 → 구성)
+      설정 전에는 "이 브라우저 저장 모드"로 동작하여 미리 테스트할 수 있습니다.
+   ========================================================================= */
+  const firebaseConfig = {
+    apiKey: "AIzaSyCYn-sUd7IxMR_QdrMkf1emLVEjmQByHLk",
+    authDomain: "gdsp-sports.firebaseapp.com",
+    databaseURL: "https://gdsp-sports-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "gdsp-sports",
+    storageBucket: "gdsp-sports.firebasestorage.app",
+    messagingSenderId: "425895078761",
+    appId: "1:425895078761:web:ab24b2c71e938682766bf8"
+  };
+
+/* ② 관리자 로그인 — Firebase Authentication(이메일/비밀번호)을 사용합니다.
+     숫자 코드를 JS에서 비교하던 예전 방식과 달리, 로그인 여부를 Realtime Database
+     보안 규칙(auth != null)이 서버 쪽에서 직접 검사하므로 개발자도구로 우회할 수 없습니다.
+     지금은 모든 종목을 관리자 계정 "하나"로 공용 로그인합니다.
+     (나중에 종목별로 비밀번호를 다르게 하고 싶다면, Firebase 콘솔에서 종목별 이메일 계정을
+     추가로 만들고 데이터베이스 규칙에서 종목별 경로마다 auth.token.email을 검사하도록
+     바꾸면 됩니다. README의 "관리자 로그인" 설명을 참고하세요.) */
+
+/* ③ 종목 목록 (3X3 농구 · 배구는 전용 아이콘 SVG 사용)
+   같은 아이콘이 홈 화면 카드 / 관리자 종목 칩 / 종목 상세 제목 등
+   여러 곳에 동시에 나타날 수 있으므로, clipPath id가 겹치지 않도록
+   호출할 때마다 새 id를 발급해서 SVG를 생성한다. */
+  let _iconSeq = 0;
+  function clipCircleSvg(bodyFn, extra){
+    const cid = "ic" + (_iconSeq++);
+    return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`
+      + `<defs><clipPath id="${cid}"><circle cx="32" cy="32" r="29"></circle></clipPath></defs>`
+      + bodyFn(cid) + (extra||"") + `</svg>`;
+  }
+  const ICON_BASKETBALL = () => "🏀";
+  const ICON_3X3 = () => clipCircleSvg(cid =>
+    `<circle cx="32" cy="32" r="29" style="fill:#f6c343"></circle>`+
+    `<g clip-path="url(#${cid})">`+
+      `<path d="M10,3 C-1,18 -1,46 10,61 C23,50 23,14 10,3 Z" style="fill:#22348f"></path>`+
+      `<path d="M54,3 C65,18 65,46 54,61 C41,50 41,14 54,3 Z" style="fill:#22348f"></path>`+
+      `<path d="M32,3 L32,61 M3,32 L18,32 M46,32 L61,32" style="fill:none;stroke:#f5821f;stroke-width:2.2"></path>`+
+    `</g>`,
+    `<ellipse cx="23" cy="19" rx="6" ry="3.5" style="fill:#ffffff" opacity=".4"></ellipse><circle cx="32" cy="32" r="29" style="fill:none;stroke:#00000030;stroke-width:1"></circle>`
+  );
+  const ICON_SHUTTLE = () => `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M27,50 L15,13 Q19,7 23,13 Q27,7 31,13 Q35,7 39,13 Q43,7 47,13 L37,50 Z" style="fill:#faf8f2;stroke:#cfc7ab;stroke-width:1.2"></path><path d="M23,15 L28,47 M32,14 L32,48 M41,15 L36,47" style="fill:none;stroke:#d8d2bd;stroke-width:1"></path><circle cx="32" cy="52" r="7" style="fill:#efe6d3;stroke:#c9bfa0;stroke-width:1"></circle><rect x="24.5" y="46.5" width="15" height="4.5" rx="1.5" style="fill:#14201a"></rect></svg>`;
+  const ICON_VOLLEY = () => clipCircleSvg(cid =>
+    `<circle cx="32" cy="32" r="29" style="fill:#f7c123"></circle>`+
+    `<g clip-path="url(#${cid})">`+
+      `<path d="M32,32 C14,34 -2,24 0,6 C16,-4 36,4 40,20 C42,26 39,31 32,32 Z" style="fill:#182e7a"></path>`+
+      `<path d="M32,32 C14,34 -2,24 0,6 C16,-4 36,4 40,20 C42,26 39,31 32,32 Z" transform="rotate(180 32 32)" style="fill:#182e7a"></path>`+
+    `</g>`,
+    `<circle cx="32" cy="32" r="4" style="fill:#f7c123;stroke:#ffffff;stroke-width:1"></circle><ellipse cx="20" cy="16" rx="6" ry="3.5" style="fill:#ffffff" opacity=".3"></ellipse><circle cx="32" cy="32" r="29" style="fill:none;stroke:#00000025;stroke-width:1"></circle>`
+  );
+
+  const SPORTS = [
+    {id:"basketball", name:"농구",       icon:ICON_BASKETBALL},
+    {id:"three",      name:"3X3 농구",   icon:ICON_3X3},
+    {id:"volleyball", name:"배구",       icon:ICON_VOLLEY},
+    {id:"badminton",  name:"배드민턴",   icon:ICON_SHUTTLE}
+  ];
+  const sportById = Object.fromEntries(SPORTS.map(s=>[s.id,s]));
+
+/* ④ 조별예선 / 본선 토너먼트 하위 구분을 쓰는 종목 (농구 · 3X3 농구) */
+  const STAGE_SPORTS = new Set(["basketball","three","volleyball","badminton"]);
+  const STAGES = [
+    {id:"group", name:"조별예선"},
+    {id:"final", name:"본선 토너먼트"},
+    {id:"league", name:"풀리그"}
+  ];
+  // 종목별로 쓰는 단계 (배구만 풀리그 포함)
+  const STAGE_IDS_BY_SPORT = {
+    basketball: ["group","final"],
+    three:      ["group","final"],
+    volleyball: ["group","final","league"],
+    badminton:  ["group"]            // 배드민턴은 본선 토너먼트 없이 조별 풀리그로 끝납니다
+  };
+  // 종목마다 단계 이름이 다른 경우 (배드민턴: 조별예선 → "풀리그")
+  const STAGE_NAME_BY_SPORT = { badminton: {group:"풀리그"} };
+  function stageLabel(sportId, stageId){
+    const st = STAGES.find(s=>s.id===stageId) || {};
+    return (STAGE_NAME_BY_SPORT[sportId] && STAGE_NAME_BY_SPORT[sportId][stageId]) || st.name;
+  }
+  function stagesFor(sportId){
+    return STAGES.filter(st=>(STAGE_IDS_BY_SPORT[sportId]||["group","final"]).includes(st.id))
+      .map(st=>Object.assign({}, st, {name: stageLabel(sportId, st.id)}));
+  }
+
+/* ⑤ 조별예선/본선 토너먼트 하위의 세부 구분(부문) 탭 — 종목별 고정 목록.
+   이 목록에 있는 종목은 "구분(부문)" 입력칸이 자유 텍스트 대신 이 목록에서
+   고르는 선택창으로 바뀝니다. */
+  const DIVISIONS_BY_SPORT = {
+    basketball: ["여중 1,2학년", "남중 1,2학년", "남고 1,2학년"],
+    three:      ["남초 5,6학년", "여중 3학년", "남중 3학년", "남고 3학년"],
+    volleyball: ["남중저학년", "남중고학년", "여중저학년", "여중고학년", "남고", "여고"],
+    badminton:  ["남중저학년", "남중통합부", "여중"]
+  };
+  // 단계마다 진행하는 구분이 다른 종목(배구): 조별예선은 조 편성이 있는 종별, 본선(4강·결승)은 남중, 풀리그는 여중·남고·여고
+  const DIVISIONS_BY_STAGE = {
+    volleyball: {
+      group:  ["남중저학년", "여중저학년", "남중고학년", "여중고학년"],
+      final:  ["남중저학년", "남중고학년"],
+      league: ["여중저학년", "여중고학년", "남고", "여고"]
+    },
+    badminton: {
+      group:  ["남중저학년", "남중통합부", "여중"]
+    }
+  };
+  function divisionsFor(sportId, stage){
+    return (DIVISIONS_BY_STAGE[sportId] && DIVISIONS_BY_STAGE[sportId][stage]) || DIVISIONS_BY_SPORT[sportId];
+  }
+
+/* ⑥ 조별예선 안에서 나뉘는 조(A~F조). 구분(부문)마다 조 개수가 다를 수 있어서
+   따로 지정 안 된 구분은 기본값(A~F)을 씁니다. */
+  const DEFAULT_POOLS = ["A","B","C","D","E","F"];
+  const POOLS_BY_DIVISION = {
+    basketball: {
+      "여중 1,2학년": ["A","B"],
+      "남중 1,2학년": ["A","B","C","D","E","F"],
+      "남고 1,2학년": ["A","B","C"]
+    },
+    three: {
+      "남초 5,6학년": ["A"],
+      "여중 3학년":   ["A","B"],
+      "남중 3학년":   ["A","B","C","D","E","F"],
+      "남고 3학년":   ["A","B"]
+    },
+    volleyball: {
+      "남중저학년": ["1","2","3","4"],
+      "여중저학년": ["1","2","3"],
+      "남중고학년": ["1","2","3","4"],
+      "여중고학년": ["1","2","3"]
+    },
+    badminton: {
+      "남중저학년": ["1","2","3"],
+      "남중통합부": ["1","2","3"],
+      "여중":       ["1","2","3"]
+    }
+  };
+  function poolsFor(sportId, division){
+    return (POOLS_BY_DIVISION[sportId] && POOLS_BY_DIVISION[sportId][division]) || DEFAULT_POOLS;
+  }
+  // 조가 하나뿐인 구분은 조 탭을 보여주지 않습니다 (3X3 남초 5,6학년)
+  const NO_POOL_TAB = { three: ["남초 5,6학년"] };
+  function showPoolTabs(sportId, division){
+    return !(NO_POOL_TAB[sportId] && NO_POOL_TAB[sportId].includes(division));
+  }
+
+/* ⑥-1 본선 토너먼트 대진표 — 8강으로 시작하는 고정 대진표(8강 4경기 → 4강 2경기 → 결승).
+   경기의 "라운드" 값을 아래 이름과 똑같이 맞추면 그 자리에 표시됩니다. */
+  const BRACKET_ROUNDS = [
+    {name:"8강", slots:["8강 1경기","8강 2경기","8강 3경기","8강 4경기"]},
+    {name:"4강", slots:["4강 1경기","4강 2경기"]},
+    {name:"결승", slots:["결승"]}
+  ];
+  // 배구는 4강부터 시작합니다.
+  const BRACKET_ROUNDS_BY_SPORT = {
+    volleyball: [
+      {name:"4강", slots:["4강 1경기","4강 2경기"]},
+      {name:"결승", slots:["결승"]}
+    ],
+    badminton: [
+      {name:"4강", slots:["4강 1경기","4강 2경기"]},
+      {name:"결승", slots:["결승"]}
+    ]
+  };
+  // 농구·3X3 농구는 구분마다 대진 단계가 다릅니다 (엑셀 기준)
+  const BRACKET_ROUNDS_BY_DIVISION = {
+    basketball: {
+      "여중 1,2학년": [
+        {name:"4강", slots:["4강 1경기","4강 2경기"]},
+        {name:"결승", slots:["결승"]}
+      ],
+      "남중 1,2학년": [
+        {name:"6강", slots:["6강 1경기","6강 2경기"]},
+        {name:"4강", slots:["4강 1경기","4강 2경기"]},
+        {name:"결승", slots:["결승"]}
+      ],
+      "남고 1,2학년": [
+        {name:"6강", slots:["6강 1경기","6강 2경기"]},
+        {name:"4강", slots:["4강 1경기","4강 2경기"]},
+        {name:"결승", slots:["결승"]}
+      ]
+    },
+    three: {
+      "남초 5,6학년": [{name:"결승", slots:["결승"]}],
+      "여중 3학년": [
+        {name:"4강", slots:["4강 1경기","4강 2경기"]},
+        {name:"결승", slots:["결승"]}
+      ],
+      "남중 3학년": [
+        {name:"6강", slots:["6강 1경기","6강 2경기"]},
+        {name:"4강", slots:["4강 1경기","4강 2경기"]},
+        {name:"결승", slots:["결승"]}
+      ],
+      "남고 3학년": [
+        {name:"4강", slots:["4강 1경기","4강 2경기"]},
+        {name:"결승", slots:["결승"]}
+      ]
+    }
+  };
+  function bracketRoundsFor(sportId, division){
+    return (BRACKET_ROUNDS_BY_DIVISION[sportId] && BRACKET_ROUNDS_BY_DIVISION[sportId][division])
+      || BRACKET_ROUNDS_BY_SPORT[sportId] || BRACKET_ROUNDS;
+  }
+
+/* ⑦-0 배구 경기 일정 — "2026 강동송파 올스타 교육장배 학교스포츠클럽대회 경기일정(배구).xlsx" 수정본(2) 기준 (78경기).
+   [고유번호, 종별, 단계(group/final/league), 조, 라운드, 날짜, 시간, 장소, 팀A, 팀B]
+   · 조는 엑셀대로 1조·2조… 숫자로 표기합니다. 남중저·남중고학년: 조별예선(4개 조) → 4강 → 결승,
+     여중저·여중고학년: 조별예선(3개 조) → 풀리그, 남고·여고: 풀리그.
+   · 본선 진출교가 정해지지 않은 경기는 엑셀대로 "미정"입니다. 확정되면 관리자 탭 "경기 일정·장소 수정"에서 팀명을 고치세요.
+   · 엑셀 비고 칸은 넣지 않았습니다.
+   예전 배구 일정(vb·vl 번호)이 등록되어 있으면 이 일정으로 한 번에 교체됩니다(관리자 로그인 상태에서 접속할 때 적용). */
+  const VOLLEY_SCHEDULE = [
+    ['vm01','남중저학년','group','1','','10월 28일(수)','16:00','강명중학교','강명중','명일중'],
+    ['vm02','남중저학년','group','1','','10월 28일(수)','16:40','강명중학교','고덕중','한영중'],
+    ['vm03','남중저학년','group','1','','10월 28일(수)','17:20','강명중학교','강명중','고덕중'],
+    ['vm04','남중저학년','group','1','','11월 13일(금)','17:00','명일중학교','명일중','한영중'],
+    ['vm05','남중저학년','group','1','','11월 13일(금)','17:40','명일중학교','강명중','한영중'],
+    ['vm06','남중저학년','group','1','','11월 13일(금)','18:20','명일중학교','명일중','고덕중'],
+    ['vm07','남중저학년','group','2','','11월 13일(금)','16:00','오금중학교','오금중','세륜중'],
+    ['vm08','남중저학년','group','2','','11월 13일(금)','16:40','오금중학교','오금중','신명중'],
+    ['vm09','남중저학년','group','2','','11월 13일(금)','17:20','오금중학교','세륜중','신명중'],
+    ['vm10','남중저학년','group','3','','10월 28일(수)','17:00','신천중학교','신천중','아주중'],
+    ['vm11','남중저학년','group','3','','10월 28일(수)','17:40','신천중학교','신천중','잠신중'],
+    ['vm12','남중저학년','group','3','','10월 28일(수)','18:20','신천중학교','아주중','잠신중'],
+    ['vm13','남중저학년','group','4','','11월 8일(일)','12:00','가락중학교','가락중','송파중'],
+    ['vm14','남중저학년','group','4','','11월 8일(일)','12:40','가락중학교','문정중','위례솔중'],
+    ['vm15','남중저학년','group','4','','11월 8일(일)','13:20','가락중학교','가락중','문정중'],
+    ['vm16','남중저학년','group','4','','11월 8일(일)','14:00','가락중학교','송파중','위례솔중'],
+    ['vm17','남중저학년','group','4','','11월 8일(일)','14:40','가락중학교','가락중','위례솔중'],
+    ['vm18','남중저학년','group','4','','11월 8일(일)','15:20','가락중학교','송파중','문정중'],
+    ['vm19','여중저학년','group','1','','11월 9일(월)','16:00','강명중학교','강명중','신명중'],
+    ['vm20','여중저학년','group','1','','11월 9일(월)','17:00','강명중학교','한영중','신명중'],
+    ['vm21','여중저학년','group','1','','11월 9일(월)','18:00','강명중학교','강명중','한영중'],
+    ['vm22','여중저학년','group','2','','11월 5일(목)','17:30','송파중학교','송파중','위례솔중'],
+    ['vm23','여중저학년','group','2','','11월 5일(목)','18:10','송파중학교','위례솔중','송례중'],
+    ['vm24','여중저학년','group','2','','11월 5일(목)','18:50','송파중학교','송파중','송례중'],
+    ['vm25','여중저학년','group','3','','11월 6일(금)','16:00','오금중학교','오금중','아주중'],
+    ['vm26','여중저학년','group','3','','11월 6일(금)','16:40','오금중학교','오금중','신천중'],
+    ['vm27','여중저학년','group','3','','11월 6일(금)','17:20','오금중학교','아주중','신천중'],
+    ['vm28','남중고학년','group','1','','11월 10일(화)','17:00','강명중학교','고덕중','강명중'],
+    ['vm29','남중고학년','group','1','','11월 10일(화)','17:40','강명중학교','한영중','강빛중'],
+    ['vm30','남중고학년','group','1','','11월 10일(화)','18:20','강명중학교','고덕중','한영중'],
+    ['vm31','남중고학년','group','1','','11월 11일(수)','16:00','강명중학교','강명중','강빛중'],
+    ['vm32','남중고학년','group','1','','11월 11일(수)','16:40','강명중학교','고덕중','강빛중'],
+    ['vm33','남중고학년','group','1','','11월 11일(수)','17:20','강명중학교','강명중','한영중'],
+    ['vm34','남중고학년','group','2','','11월 12일(목)','17:00','신명중학교','신명중','명일중'],
+    ['vm35','남중고학년','group','2','','11월 12일(목)','18:00','신명중학교','송파중','명일중'],
+    ['vm36','남중고학년','group','2','','11월 12일(목)','19:00','신명중학교','신명중','송파중'],
+    ['vm37','남중고학년','group','3','','11월 7일(토)','09:00','배명중학교','배명중','가원중'],
+    ['vm38','남중고학년','group','3','','11월 7일(토)','09:40','배명중학교','가원중','신천중'],
+    ['vm39','남중고학년','group','3','','11월 7일(토)','10:20','배명중학교','신천중','배명중'],
+    ['vm40','남중고학년','group','4','','11월 15일(일)','11:00','문현중학교','문정중','거원중'],
+    ['vm41','남중고학년','group','4','','11월 15일(일)','11:40','문현중학교','위례솔중','문현중'],
+    ['vm42','남중고학년','group','4','','11월 15일(일)','12:20','문현중학교','문정중','위례솔중'],
+    ['vm43','남중고학년','group','4','','11월 15일(일)','13:00','문현중학교','거원중','문현중'],
+    ['vm44','남중고학년','group','4','','11월 15일(일)','13:40','문현중학교','문정중','문현중'],
+    ['vm45','남중고학년','group','4','','11월 15일(일)','14:20','문현중학교','거원중','위례솔중'],
+    ['vm46','여중고학년','group','1','','11월 7일(토)','08:30','명일중학교','강빛중','고덕중'],
+    ['vm47','여중고학년','group','1','','11월 7일(토)','09:10','명일중학교','강명중','명일중'],
+    ['vm48','여중고학년','group','1','','11월 7일(토)','09:50','명일중학교','강빛중','강명중'],
+    ['vm49','여중고학년','group','1','','11월 7일(토)','10:30','명일중학교','고덕중','명일중'],
+    ['vm50','여중고학년','group','1','','11월 7일(토)','11:10','명일중학교','강빛중','명일중'],
+    ['vm51','여중고학년','group','1','','11월 7일(토)','11:50','명일중학교','고덕중','강명중'],
+    ['vm52','여중고학년','group','2','','11월 9일(월)','16:00','오금중학교','오금중','송파중'],
+    ['vm53','여중고학년','group','2','','11월 9일(월)','16:40','오금중학교','오금중','위례솔중'],
+    ['vm54','여중고학년','group','2','','11월 9일(월)','17:20','오금중학교','송파중','위례솔중'],
+    ['vm55','여중고학년','group','3','','11월 11일(수)','16:00','잠실중학교','신천중','잠실중'],
+    ['vm56','여중고학년','group','3','','11월 11일(수)','16:40','잠실중학교','한영중','신천중'],
+    ['vm57','여중고학년','group','3','','11월 11일(수)','17:20','잠실중학교','한영중','잠실중'],
+    ['vm58','남고','league','','','10월 23일(금)','16:00','가락고등학교','가락고','방산고'],
+    ['vm59','남고','league','','','10월 23일(금)','16:40','가락고등학교','방산고','배명고'],
+    ['vm60','남고','league','','','11월 14일(토)','10:30','가락고등학교','방산고','보인고'],
+    ['vm61','남고','league','','','11월 21일(토)','08:30','보인고등학교','보인고','배명고'],
+    ['vm62','남고','league','','','11월 21일(토)','09:10','보인고등학교','가락고','배명고'],
+    ['vm63','남고','league','','','11월 21일(토)','09:50','보인고등학교','보인고','가락고'],
+    ['vm64','여고','league','','','11월 14일(토)','08:30','가락고등학교','가락고','둔촌고'],
+    ['vm65','여고','league','','','11월 14일(토)','09:10','가락고등학교','둔촌고','강일고'],
+    ['vm66','여고','league','','','11월 14일(토)','09:50','가락고등학교','강일고','가락고'],
+    ['vm67','여중고학년','league','','','11월 16일(월)','16:30','강명중학교','미정','미정'],
+    ['vm68','여중고학년','league','','','11월 16일(월)','17:10','강명중학교','미정','미정'],
+    ['vm69','여중고학년','league','','','11월 16일(월)','17:50','강명중학교','미정','미정'],
+    ['vm70','남중고학년','final','','4강 1경기','11월 18일(수)','16:30','강명중학교','미정','미정'],
+    ['vm71','남중고학년','final','','4강 2경기','11월 18일(수)','17:10','강명중학교','미정','미정'],
+    ['vm72','남중고학년','final','','결승','11월 18일(수)','17:50','강명중학교','1경기 승팀','2경기 승팀'],
+    ['vm73','여중저학년','league','','','11월 23일(월)','16:30','강명중학교','미정','미정'],
+    ['vm74','여중저학년','league','','','11월 23일(월)','17:10','강명중학교','미정','미정'],
+    ['vm75','여중저학년','league','','','11월 23일(월)','17:50','강명중학교','미정','미정'],
+    ['vm76','남중저학년','final','','4강 1경기','11월 25일(수)','16:30','강명중학교','미정','미정'],
+    ['vm77','남중저학년','final','','4강 2경기','11월 25일(수)','17:10','강명중학교','미정','미정'],
+    ['vm78','남중저학년','final','','결승','11월 25일(수)','17:50','강명중학교','1경기 승팀','2경기 승팀'],
+  ];
+
+/* ⑦-1 배드민턴 경기 일정 — "2026 강동송파 올스타 교육장배 학교스포츠클럽대회 경기일정(배드민턴).xlsx" 기준 (63경기).
+   형식은 위 배구와 같습니다. 남중저학년·남중통합부·여중 조별예선(각 1~3조)만 들어 있고 본선 토너먼트 경기는 아직 없어 대진표 틀만 보입니다.
+   · 조는 엑셀 비고 칸의 "1조·2조·3조"입니다. 장소 끝의 빈칸은 지웠고, 학교명은 엑셀에 적힌 그대로입니다.
+   예전 배드민턴 일정(bd·bm·bn·bp 번호)이 등록되어 있으면 이 일정으로 한 번에 교체됩니다(관리자 로그인 상태에서 접속할 때 적용). */
+  const BADMINTON_SCHEDULE = [
+    ['bq01','남중저학년','group','1','','10월 30일(금)','15:40','방산중학교','방산중학교','문정중학교'],
+    ['bq02','남중저학년','group','1','','10월 30일(금)','16:00','방산중학교','송례중학교','가원중학교'],
+    ['bq03','남중저학년','group','1','','10월 30일(금)','16:20','방산중학교','방산중학교','송례중학교'],
+    ['bq04','남중저학년','group','1','','10월 30일(금)','16:40','방산중학교','문정중학교','가원중학교'],
+    ['bq05','남중저학년','group','1','','10월 30일(금)','17:00','방산중학교','가원중학교','방산중학교'],
+    ['bq06','남중저학년','group','1','','10월 30일(금)','17:20','방산중학교','문정중학교','송례중학교'],
+    ['bq07','남중저학년','group','2','','11월 13일(금)','15:40','한산중학교','오륜중학교','한영중학교'],
+    ['bq08','남중저학년','group','2','','11월 13일(금)','16:00','한산중학교','신천중학교','한산중학교'],
+    ['bq09','남중저학년','group','2','','11월 13일(금)','16:20','한산중학교','오륜중학교','신천중학교'],
+    ['bq10','남중저학년','group','2','','11월 13일(금)','16:40','한산중학교','한영중학교','한산중학교'],
+    ['bq11','남중저학년','group','2','','11월 13일(금)','17:00','한산중학교','오륜중학교','한산중학교'],
+    ['bq12','남중저학년','group','2','','11월 13일(금)','17:20','한산중학교','한영중학교','신천중학교'],
+    ['bq13','남중저학년','group','3','','11월 1일(일)','14:00','강명중학교','강명중학교','동신중학교'],
+    ['bq14','남중저학년','group','3','','11월 1일(일)','14:20','강명중학교','동신중학교','고덕중학교'],
+    ['bq15','남중저학년','group','3','','11월 1일(일)','14:40','강명중학교','강명중학교','고덕중학교'],
+    ['bq16','남중통합부','group','1','','11월 9일(월)','16:00','문정중학교','가원중학교','문정중학교'],
+    ['bq17','남중통합부','group','1','','11월 9일(월)','16:20','문정중학교','문정중학교','거원중학교'],
+    ['bq18','남중통합부','group','1','','11월 9일(월)','16:40','문정중학교','가원중학교','거원중학교'],
+    ['bq19','남중통합부','group','1','','11월 9일(월)','17:00','문정중학교','송례중학교','위례솔중학교'],
+    ['bq20','남중통합부','group','1','','11월 9일(월)','17:20','문정중학교','문정중학교','위례솔중학교'],
+    ['bq21','남중통합부','group','1','','11월 9일(월)','17:40','문정중학교','거원중학교','송례중학교'],
+    ['bq22','남중통합부','group','1','','11월 9일(월)','18:00','문정중학교','가원중학교','송례중학교'],
+    ['bq23','남중통합부','group','1','','11월 9일(월)','18:20','문정중학교','거원중학교','위례솔중학교'],
+    ['bq24','남중통합부','group','1','','11월 9일(월)','18:40','문정중학교','문정중학교','송례중학교'],
+    ['bq25','남중통합부','group','1','','11월 9일(월)','19:00','문정중학교','가원중학교','위례솔중학교'],
+    ['bq26','남중통합부','group','2','','11월 5일(목)','16:40','한산중학교','한산중학교','신명중학교'],
+    ['bq27','남중통합부','group','2','','11월 5일(목)','17:00','한산중학교','배명중학교','잠신중학교'],
+    ['bq28','남중통합부','group','2','','11월 5일(목)','17:20','한산중학교','한산중학교','배명중학교'],
+    ['bq29','남중통합부','group','2','','11월 5일(목)','17:40','한산중학교','신명중학교','잠신중학교'],
+    ['bq30','남중통합부','group','2','','11월 5일(목)','18:00','한산중학교','한산중학교','잠신중학교'],
+    ['bq31','남중통합부','group','2','','11월 5일(목)','18:20','한산중학교','신명중학교','배명중학교'],
+    ['bq32','남중통합부','group','3','','11월 8일(일)','10:00','강명중학교','강명중학교','동신중학교'],
+    ['bq33','남중통합부','group','3','','11월 8일(일)','10:20','강명중학교','고덕중학교','명일중학교'],
+    ['bq34','남중통합부','group','3','','11월 8일(일)','10:40','강명중학교','강명중학교','고덕중학교'],
+    ['bq35','남중통합부','group','3','','11월 8일(일)','11:00','강명중학교','동신중학교','명일중학교'],
+    ['bq36','남중통합부','group','3','','11월 8일(일)','11:20','강명중학교','강명중학교','명일중학교'],
+    ['bq37','남중통합부','group','3','','11월 8일(일)','11:40','강명중학교','동신중학교','고덕중학교'],
+    ['bq38','여중','group','1','','11월 6일(금)','16:00','오주중학교','오주중학교','위례솔중학교'],
+    ['bq39','여중','group','1','','11월 6일(금)','16:20','오주중학교','가원중학교','송례중학교'],
+    ['bq40','여중','group','1','','11월 6일(금)','16:40','오주중학교','위례솔중학교','송례중학교'],
+    ['bq41','여중','group','1','','11월 6일(금)','17:00','오주중학교','오주중학교','문정중학교'],
+    ['bq42','여중','group','1','','11월 6일(금)','17:20','오주중학교','송례중학교','문정중학교'],
+    ['bq43','여중','group','1','','11월 6일(금)','17:40','오주중학교','위례솔중학교','가원중학교'],
+    ['bq44','여중','group','1','','11월 6일(금)','18:00','오주중학교','문정중학교','가원중학교'],
+    ['bq45','여중','group','1','','11월 6일(금)','18:20','오주중학교','송례중학교','오주중학교'],
+    ['bq46','여중','group','1','','11월 6일(금)','18:40','오주중학교','가원중학교','오주중학교'],
+    ['bq47','여중','group','1','','11월 6일(금)','19:00','오주중학교','문정중학교','위례솔중학교'],
+    ['bq48','여중','group','2','','11월 6일(금)','16:00','방산중학교','방산중학교','오륜중학교'],
+    ['bq49','여중','group','2','','11월 6일(금)','16:20','방산중학교','동신중학교','잠신중학교'],
+    ['bq50','여중','group','2','','11월 6일(금)','16:40','방산중학교','한영중학교','방산중학교'],
+    ['bq51','여중','group','2','','11월 6일(금)','17:00','방산중학교','오륜중학교','동신중학교'],
+    ['bq52','여중','group','2','','11월 6일(금)','17:20','방산중학교','잠신중학교','한영중학교'],
+    ['bq53','여중','group','2','','11월 6일(금)','17:40','방산중학교','방산중학교','동신중학교'],
+    ['bq54','여중','group','2','','11월 6일(금)','18:00','방산중학교','오륜중학교','잠신중학교'],
+    ['bq55','여중','group','2','','11월 6일(금)','18:20','방산중학교','한영중학교','오륜중학교'],
+    ['bq56','여중','group','2','','11월 6일(금)','18:40','방산중학교','방산중학교','잠신중학교'],
+    ['bq57','여중','group','2','','11월 6일(금)','19:00','방산중학교','동신중학교','한영중학교'],
+    ['bq58','여중','group','3','','11월 13일(금)','15:30','신명중학교','천일중학교','신명중학교'],
+    ['bq59','여중','group','3','','11월 13일(금)','15:30','신명중학교','고덕중학교','성덕여자중학교'],
+    ['bq60','여중','group','3','','11월 13일(금)','15:30','신명중학교','천일중학교','고덕중학교'],
+    ['bq61','여중','group','3','','11월 13일(금)','15:30','신명중학교','신명중학교','성덕여자중학교'],
+    ['bq62','여중','group','3','','11월 13일(금)','15:30','신명중학교','천일중학교','성덕여자중학교'],
+    ['bq63','여중','group','3','','11월 13일(금)','15:30','신명중학교','신명중학교','고덕중학교'],
+  ];
+
+/* ⑦-1 농구(5대5) 경기 일정 — "2026 강동송파 교육장배 올스타 학교스포츠클럽대회 경기일정(5대5 농구).xlsx" 기준 (52경기).
+   [고유번호, 종별, 단계(group/final), 조, 라운드, 날짜, 시간, 장소, 팀A, 팀B]
+   · 조별예선 장소·일시는 참가교 간 협의 결과이고, 본선은 엑셀대로 "진출교 간 협의"(결승만 오주중학교)입니다.
+     확정되면 관리자 탭의 "경기 일정·장소 수정"에서 장소·시간을 고치세요.
+   · 엑셀의 "22경기 승리교"는 "6강 1경기 승팀"처럼 라운드 이름으로 바꿔 넣었습니다(결과가 입력되면 자동으로 학교명 표시).
+   · 엑셀의 "준결승"은 앱의 "4강"으로 표기합니다.
+   처음 접속했을 때 농구 경기가 하나도 없으면 자동으로 채워집니다(같은 번호는 중복 등록되지 않음). */
+  const BASKETBALL_SCHEDULE = [
+    ['bk01','남중 1,2학년','group','A','','11월 6일(금)','16:00','잠신중학교','잠신중학교','신천중학교'],
+    ['bk02','남중 1,2학년','group','A','','11월 6일(금)','17:00','잠신중학교','강일중학교','동신중학교'],
+    ['bk03','남중 1,2학년','group','A','','11월 6일(금)','18:20','잠신중학교','동신중학교','잠신중학교'],
+    ['bk04','남중 1,2학년','group','A','','11월 7일(토)','10:00','강일중학교','강일중학교','잠신중학교'],
+    ['bk05','남중 1,2학년','group','A','','11월 7일(토)','11:00','강일중학교','동신중학교','신천중학교'],
+    ['bk06','남중 1,2학년','group','A','','11월 7일(토)','12:20','강일중학교','신천중학교','강일중학교'],
+    ['bk07','남중 1,2학년','group','B','','10월 23일(금)','16:30','천호중학교','천호중학교','한영중학교'],
+    ['bk08','남중 1,2학년','group','B','','10월 23일(금)','17:30','천호중학교','천호중학교','방산중학교'],
+    ['bk09','남중 1,2학년','group','B','','10월 23일(금)','18:30','천호중학교','방산중학교','한영중학교'],
+    ['bk10','남중 1,2학년','group','C','','11월 8일(일)','09:00','강동중학교','강동중학교','명일중학교'],
+    ['bk11','남중 1,2학년','group','C','','11월 8일(일)','10:00','강동중학교','명일중학교','배명중학교'],
+    ['bk12','남중 1,2학년','group','C','','11월 8일(일)','11:00','강동중학교','배명중학교','강동중학교'],
+    ['bk13','남중 1,2학년','group','D','','10월 23일(금)','16:00','가원중학교','거원중학교','위례솔중학교'],
+    ['bk14','남중 1,2학년','group','D','','10월 23일(금)','17:00','가원중학교','가원중학교','거원중학교'],
+    ['bk15','남중 1,2학년','group','D','','10월 23일(금)','18:00','가원중학교','위례솔중학교','가원중학교'],
+    ['bk16','남중 1,2학년','group','E','','11월 4일(수)','16:00','방이중학교','보성중학교','방이중학교'],
+    ['bk17','남중 1,2학년','group','E','','11월 4일(수)','17:00','방이중학교','오금중학교','보성중학교'],
+    ['bk18','남중 1,2학년','group','E','','11월 4일(수)','18:00','방이중학교','방이중학교','오금중학교'],
+    ['bk19','남중 1,2학년','group','F','','11월 7일(토)','09:00','강명중학교','송파중학교','강명중학교'],
+    ['bk20','남중 1,2학년','group','F','','11월 7일(토)','10:00','강명중학교','강명중학교','송례중학교'],
+    ['bk21','남중 1,2학년','group','F','','11월 7일(토)','11:00','강명중학교','송파중학교','송례중학교'],
+    ['bk22','남중 1,2학년','final','','6강 1경기','11월 13일(금)','16:30','진출교 간 협의','A조 1위','F조 1위'],
+    ['bk23','남중 1,2학년','final','','6강 2경기','11월 13일(금)','17:30','진출교 간 협의','E조 1위','C조 1위'],
+    ['bk24','남중 1,2학년','final','','4강 1경기','11월 16일(월)','16:30','진출교 간 협의','D조 1위','6강 1경기 승팀'],
+    ['bk25','남중 1,2학년','final','','4강 2경기','11월 16일(월)','17:30','진출교 간 협의','6강 2경기 승팀','B조 1위'],
+    ['bk26','남중 1,2학년','final','','결승','11월 21일(토)','10:00','오주중학교','4강 1경기 승팀','4강 2경기 승팀'],
+    ['bk27','여중 1,2학년','group','A','','11월 6일(금)','16:00','방이중학교','방이중학교','거원중학교'],
+    ['bk28','여중 1,2학년','group','A','','11월 6일(금)','17:00','방이중학교','한영중학교','방이중학교'],
+    ['bk29','여중 1,2학년','group','A','','11월 6일(금)','18:00','방이중학교','거원중학교','한영중학교'],
+    ['bk30','여중 1,2학년','group','B','','10월 26일(월)','16:00','가락중학교','가락중학교','송례중학교'],
+    ['bk31','여중 1,2학년','group','B','','10월 26일(월)','17:00','가락중학교','강동중학교','정신여자중학교'],
+    ['bk32','여중 1,2학년','group','B','','10월 30일(금)','16:00','정신여자중학교','정신여자중학교','가락중학교'],
+    ['bk33','여중 1,2학년','group','B','','10월 30일(금)','17:00','정신여자중학교','강동중학교','송례중학교'],
+    ['bk34','여중 1,2학년','group','B','','11월 6일(금)','16:00','정신여자중학교','정신여자중학교','송례중학교'],
+    ['bk35','여중 1,2학년','group','B','','11월 6일(금)','17:00','정신여자중학교','가락중학교','강동중학교'],
+    ['bk36','여중 1,2학년','final','','4강 1경기','11월 16일(월)','16:30','진출교 간 협의','A조 1위','B조 2위'],
+    ['bk37','여중 1,2학년','final','','4강 2경기','11월 16일(월)','17:30','진출교 간 협의','A조 2위','B조 1위'],
+    ['bk38','여중 1,2학년','final','','결승','11월 21일(토)','12:00','오주중학교','4강 1경기 승팀','4강 2경기 승팀'],
+    ['bk39','남고 1,2학년','group','A','','10월 26일(월)','16:30','잠신고등학교','잠신고등학교','영동일고등학교'],
+    ['bk40','남고 1,2학년','group','A','','10월 26일(월)','17:30','잠신고등학교','보성고등학교','잠신고등학교'],
+    ['bk41','남고 1,2학년','group','A','','10월 26일(월)','18:30','잠신고등학교','영동일고등학교','보성고등학교'],
+    ['bk42','남고 1,2학년','group','B','','11월 3일(화)','17:00','보인고등학교','보인고등학교','가락고등학교'],
+    ['bk43','남고 1,2학년','group','B','','11월 3일(화)','18:00','보인고등학교','가락고등학교','강일고등학교'],
+    ['bk44','남고 1,2학년','group','B','','11월 3일(화)','19:00','보인고등학교','강일고등학교','보인고등학교'],
+    ['bk45','남고 1,2학년','group','C','','10월 30일(금)','15:40','잠실고등학교','잠실고등학교','방산고등학교'],
+    ['bk46','남고 1,2학년','group','C','','10월 30일(금)','16:40','잠실고등학교','방산고등학교','배명고등학교'],
+    ['bk47','남고 1,2학년','group','C','','10월 30일(금)','17:40','잠실고등학교','잠실고등학교','배명고등학교'],
+    ['bk48','남고 1,2학년','final','','6강 1경기','11월 13일(금)','16:30','진출교 간 협의','B조 2위','A조 2위'],
+    ['bk49','남고 1,2학년','final','','6강 2경기','11월 13일(금)','17:30','진출교 간 협의','C조 2위','B조 1위'],
+    ['bk50','남고 1,2학년','final','','4강 1경기','11월 16일(월)','16:30','진출교 간 협의','C조 1위','6강 1경기 승팀'],
+    ['bk51','남고 1,2학년','final','','4강 2경기','11월 16일(월)','17:30','진출교 간 협의','6강 2경기 승팀','A조 1위'],
+    ['bk52','남고 1,2학년','final','','결승','11월 21일(토)','11:00','오주중학교','4강 1경기 승팀','4강 2경기 승팀'],
+  ];
+
+/* ⑦-2 3X3 농구 경기 일정 — "2026 강동송파 교육장배 올스타 3X3 농구 대회 일정표(농구_3X3).xlsx" 기준 (75경기).
+   [고유번호, 종별, 단계(group/final), 조, 라운드, 날짜, 시간, 장소, 팀A, 팀B]
+   · 남중 3학년: 가락중학교 / 남초 5,6학년·여중 3학년·남고 3학년: 문정중학교 (A코트·B코트 동시 진행, 경기당 15분)
+   · 대회 날짜는 아래 두 값입니다(엑셀에는 날짜가 없어 직접 지정).
+     (일정은 처음 접속해 3X3 경기가 하나도 없을 때 한 번만 등록되므로, 이미 등록된 뒤에는 관리자 탭 '경기 일정·장소 수정'에서 고칩니다.)
+   · '코트 정비' 칸은 경기가 아니므로 넣지 않았습니다. */
+  const THREE_DATE_NAMJUNG = '11월 28일(토)';   // 남중 3학년 (가락중학교) 대회 날짜
+  const THREE_DATE_MOONJUNG = '11월 28일(토)';  // 남초·여중·남고 (문정중학교) 대회 날짜
+  const THREE_SCHEDULE = [
+    ['t301','남중 3학년','group','A','',THREE_DATE_NAMJUNG,'13:00~13:15','가락중학교 A코트','강동중학교','위례솔중학교'],
+    ['t302','남중 3학년','group','A','',THREE_DATE_NAMJUNG,'13:00~13:15','가락중학교 B코트','석촌중학교','거원중학교'],
+    ['t303','남중 3학년','group','B','',THREE_DATE_NAMJUNG,'13:15~13:30','가락중학교 A코트','강일중학교','천호중학교'],
+    ['t304','남중 3학년','group','B','',THREE_DATE_NAMJUNG,'13:15~13:30','가락중학교 B코트','가락중학교','방산중학교'],
+    ['t305','남중 3학년','group','C','',THREE_DATE_NAMJUNG,'13:30~13:45','가락중학교 A코트','보인중학교','한영중학교'],
+    ['t306','남중 3학년','group','C','',THREE_DATE_NAMJUNG,'13:30~13:45','가락중학교 B코트','풍성중학교','송파중학교'],
+    ['t307','남중 3학년','group','D','',THREE_DATE_NAMJUNG,'13:45~14:00','가락중학교 A코트','송례중학교','잠신중학교'],
+    ['t308','남중 3학년','group','D','',THREE_DATE_NAMJUNG,'13:45~14:00','가락중학교 B코트','잠실중학교','세륜중학교'],
+    ['t309','남중 3학년','group','E','',THREE_DATE_NAMJUNG,'14:00~14:15','가락중학교 A코트','한산중학교','문현중학교'],
+    ['t310','남중 3학년','group','E','',THREE_DATE_NAMJUNG,'14:00~14:15','가락중학교 B코트','방이중학교','강명중학교'],
+    ['t311','남중 3학년','group','F','',THREE_DATE_NAMJUNG,'14:15~14:30','가락중학교 A코트','가원중학교','오주중학교'],
+    ['t312','남중 3학년','group','F','',THREE_DATE_NAMJUNG,'14:15~14:30','가락중학교 B코트','보성중학교','명일중학교'],
+    ['t313','남중 3학년','group','A','',THREE_DATE_NAMJUNG,'14:30~14:45','가락중학교 A코트','위례솔중학교','석촌중학교'],
+    ['t314','남중 3학년','group','A','',THREE_DATE_NAMJUNG,'14:30~14:45','가락중학교 B코트','강동중학교','거원중학교'],
+    ['t315','남중 3학년','group','B','',THREE_DATE_NAMJUNG,'14:45~15:00','가락중학교 A코트','천호중학교','가락중학교'],
+    ['t316','남중 3학년','group','B','',THREE_DATE_NAMJUNG,'14:45~15:00','가락중학교 B코트','강일중학교','방산중학교'],
+    ['t317','남중 3학년','group','C','',THREE_DATE_NAMJUNG,'15:00~15:15','가락중학교 A코트','한영중학교','풍성중학교'],
+    ['t318','남중 3학년','group','C','',THREE_DATE_NAMJUNG,'15:00~15:15','가락중학교 B코트','보인중학교','송파중학교'],
+    ['t319','남중 3학년','group','D','',THREE_DATE_NAMJUNG,'15:15~15:30','가락중학교 A코트','잠신중학교','잠실중학교'],
+    ['t320','남중 3학년','group','D','',THREE_DATE_NAMJUNG,'15:15~15:30','가락중학교 B코트','송례중학교','세륜중학교'],
+    ['t321','남중 3학년','group','E','',THREE_DATE_NAMJUNG,'15:30~15:45','가락중학교 A코트','문현중학교','방이중학교'],
+    ['t322','남중 3학년','group','E','',THREE_DATE_NAMJUNG,'15:30~15:45','가락중학교 B코트','한산중학교','강명중학교'],
+    ['t323','남중 3학년','group','F','',THREE_DATE_NAMJUNG,'15:45~16:00','가락중학교 A코트','오주중학교','보성중학교'],
+    ['t324','남중 3학년','group','F','',THREE_DATE_NAMJUNG,'15:45~16:00','가락중학교 B코트','가원중학교','명일중학교'],
+    ['t325','남중 3학년','group','A','',THREE_DATE_NAMJUNG,'16:00~16:15','가락중학교 A코트','거원중학교','위례솔중학교'],
+    ['t326','남중 3학년','group','A','',THREE_DATE_NAMJUNG,'16:00~16:15','가락중학교 B코트','석촌중학교','강동중학교'],
+    ['t327','남중 3학년','group','B','',THREE_DATE_NAMJUNG,'16:15~16:30','가락중학교 A코트','방산중학교','천호중학교'],
+    ['t328','남중 3학년','group','B','',THREE_DATE_NAMJUNG,'16:15~16:30','가락중학교 B코트','가락중학교','강일중학교'],
+    ['t329','남중 3학년','group','C','',THREE_DATE_NAMJUNG,'16:30~16:45','가락중학교 A코트','송파중학교','한영중학교'],
+    ['t330','남중 3학년','group','C','',THREE_DATE_NAMJUNG,'16:30~16:45','가락중학교 B코트','풍성중학교','보인중학교'],
+    ['t331','남중 3학년','group','D','',THREE_DATE_NAMJUNG,'16:45~17:00','가락중학교 A코트','세륜중학교','잠신중학교'],
+    ['t332','남중 3학년','group','D','',THREE_DATE_NAMJUNG,'16:45~17:00','가락중학교 B코트','잠실중학교','송례중학교'],
+    ['t333','남중 3학년','group','E','',THREE_DATE_NAMJUNG,'17:00~17:15','가락중학교 A코트','강명중학교','문현중학교'],
+    ['t334','남중 3학년','group','E','',THREE_DATE_NAMJUNG,'17:00~17:15','가락중학교 B코트','방이중학교','한산중학교'],
+    ['t335','남중 3학년','group','F','',THREE_DATE_NAMJUNG,'17:15~17:30','가락중학교 A코트','명일중학교','오주중학교'],
+    ['t336','남중 3학년','group','F','',THREE_DATE_NAMJUNG,'17:15~17:30','가락중학교 B코트','보성중학교','가원중학교'],
+    ['t337','남중 3학년','final','','6강 1경기',THREE_DATE_NAMJUNG,'17:30~17:45','가락중학교 A코트','A조 1위','B조 1위'],
+    ['t338','남중 3학년','final','','6강 2경기',THREE_DATE_NAMJUNG,'17:30~17:45','가락중학교 B코트','C조 1위','D조 1위'],
+    ['t339','남중 3학년','final','','4강 1경기',THREE_DATE_NAMJUNG,'18:00~18:15','가락중학교 A코트','E조 1위','6강 1경기 승팀'],
+    ['t340','남중 3학년','final','','4강 2경기',THREE_DATE_NAMJUNG,'18:00~18:15','가락중학교 B코트','6강 2경기 승팀','F조 1위'],
+    ['t341','남중 3학년','final','','결승',THREE_DATE_NAMJUNG,'18:30~18:45','가락중학교 A코트','4강 1경기 승팀','4강 2경기 승팀'],
+    ['t342','남초 5,6학년','group','A','',THREE_DATE_MOONJUNG,'13:00~13:15','문정중학교 A코트','해누리초등학교','위례별초등학교'],
+    ['t343','남초 5,6학년','group','A','',THREE_DATE_MOONJUNG,'13:00~13:15','문정중학교 B코트','오륜초등학교','거원초등학교'],
+    ['t344','여중 3학년','group','A','',THREE_DATE_MOONJUNG,'13:15~13:30','문정중학교 A코트','강동중학교','한영중학교'],
+    ['t345','여중 3학년','group','A','',THREE_DATE_MOONJUNG,'13:15~13:30','문정중학교 B코트','송례중학교','오주중학교'],
+    ['t346','여중 3학년','group','B','',THREE_DATE_MOONJUNG,'13:30~13:45','문정중학교 A코트','정신여자중학교','문정중학교'],
+    ['t347','여중 3학년','group','B','',THREE_DATE_MOONJUNG,'13:30~13:45','문정중학교 B코트','거원중학교','위례솔중학교'],
+    ['t348','남초 5,6학년','group','A','',THREE_DATE_MOONJUNG,'13:45~14:00','문정중학교 A코트','해누리초등학교','오륜초등학교'],
+    ['t349','남초 5,6학년','group','A','',THREE_DATE_MOONJUNG,'13:45~14:00','문정중학교 B코트','위례별초등학교','거원초등학교'],
+    ['t350','여중 3학년','group','A','',THREE_DATE_MOONJUNG,'14:00~14:15','문정중학교 A코트','강동중학교','송례중학교'],
+    ['t351','여중 3학년','group','A','',THREE_DATE_MOONJUNG,'14:00~14:15','문정중학교 B코트','한영중학교','오주중학교'],
+    ['t352','여중 3학년','group','B','',THREE_DATE_MOONJUNG,'14:15~14:30','문정중학교 A코트','정신여자중학교','거원중학교'],
+    ['t353','여중 3학년','group','B','',THREE_DATE_MOONJUNG,'14:15~14:30','문정중학교 B코트','문정중학교','위례솔중학교'],
+    ['t354','남초 5,6학년','group','A','',THREE_DATE_MOONJUNG,'14:30~14:45','문정중학교 A코트','위례별초등학교','오륜초등학교'],
+    ['t355','남초 5,6학년','group','A','',THREE_DATE_MOONJUNG,'14:30~14:45','문정중학교 B코트','거원초등학교','해누리초등학교'],
+    ['t356','여중 3학년','group','A','',THREE_DATE_MOONJUNG,'14:45~15:00','문정중학교 A코트','한영중학교','송례중학교'],
+    ['t357','여중 3학년','group','A','',THREE_DATE_MOONJUNG,'14:45~15:00','문정중학교 B코트','오주중학교','강동중학교'],
+    ['t358','여중 3학년','group','B','',THREE_DATE_MOONJUNG,'15:00~15:15','문정중학교 A코트','문정중학교','거원중학교'],
+    ['t359','여중 3학년','group','B','',THREE_DATE_MOONJUNG,'15:00~15:15','문정중학교 B코트','위례솔중학교','정신여자중학교'],
+    ['t360','남초 5,6학년','final','','결승',THREE_DATE_MOONJUNG,'15:15~15:30','문정중학교 A코트','A조 1위','A조 2위'],
+    ['t361','남고 3학년','group','B','',THREE_DATE_MOONJUNG,'15:15~15:30','문정중학교 B코트','보성고등학교','잠신고등학교'],
+    ['t362','남고 3학년','group','A','',THREE_DATE_MOONJUNG,'15:30~15:45','문정중학교 A코트','잠실고등학교','배명고등학교'],
+    ['t363','남고 3학년','group','A','',THREE_DATE_MOONJUNG,'15:30~15:45','문정중학교 B코트','방산고등학교','오금고등학교'],
+    ['t364','여중 3학년','final','','4강 1경기',THREE_DATE_MOONJUNG,'15:45~16:00','문정중학교 A코트','A조 1위','B조 2위'],
+    ['t365','여중 3학년','final','','4강 2경기',THREE_DATE_MOONJUNG,'15:45~16:00','문정중학교 B코트','A조 2위','B조 1위'],
+    ['t366','남고 3학년','group','B','',THREE_DATE_MOONJUNG,'16:00~16:15','문정중학교 B코트','문현고등학교','보성고등학교'],
+    ['t367','남고 3학년','group','A','',THREE_DATE_MOONJUNG,'16:15~16:30','문정중학교 A코트','잠실고등학교','방산고등학교'],
+    ['t368','남고 3학년','group','A','',THREE_DATE_MOONJUNG,'16:15~16:30','문정중학교 B코트','배명고등학교','오금고등학교'],
+    ['t369','여중 3학년','final','','결승',THREE_DATE_MOONJUNG,'16:30~16:45','문정중학교 A코트','4강 1경기 승팀','4강 2경기 승팀'],
+    ['t370','남고 3학년','group','B','',THREE_DATE_MOONJUNG,'16:45~17:00','문정중학교 B코트','잠신고등학교','문현고등학교'],
+    ['t371','남고 3학년','group','A','',THREE_DATE_MOONJUNG,'17:00~17:15','문정중학교 A코트','오금고등학교','잠실고등학교'],
+    ['t372','남고 3학년','group','A','',THREE_DATE_MOONJUNG,'17:00~17:15','문정중학교 B코트','방산고등학교','배명고등학교'],
+    ['t373','남고 3학년','final','','4강 1경기',THREE_DATE_MOONJUNG,'17:30~17:45','문정중학교 A코트','A조 1위','B조 2위'],
+    ['t374','남고 3학년','final','','4강 2경기',THREE_DATE_MOONJUNG,'17:30~17:45','문정중학교 B코트','A조 2위','B조 1위'],
+    ['t375','남고 3학년','final','','결승',THREE_DATE_MOONJUNG,'18:00~18:15','문정중학교 A코트','4강 1경기 승팀','4강 2경기 승팀'],
+  ];
+  const SCHEDULES = [
+    {sport:"basketball", rows:BASKETBALL_SCHEDULE},
+    {sport:"three",      rows:THREE_SCHEDULE},
+    {sport:"volleyball", rows:VOLLEY_SCHEDULE, replaceOld:/^v[bl]\d+$/},
+    {sport:"badminton",  rows:BADMINTON_SCHEDULE, replaceOld:/^b[dmnpq]\d+$/}
+  ];
+  function seedRecords(sport, rows){
+    const rec = {};
+    rows.forEach((r,i)=>{
+      rec[r[0]] = {sport:sport, group:r[1], stage:r[2], pool:r[3], round:r[4],
+        date:r[5], time:r[6], place:r[7], teamA:r[8], teamB:r[9],
+        score:"", winner:"", order:1000+i, ts:Date.now()};
+    });
+    return rec;
+  }
+  // 종목별 일정이 비어 있을 때만 채웁니다. (실시간 모드: 번호별로 저장해 여러 명이 동시에 열어도 중복되지 않음)
+  function seedSchedulesIfNeeded(){
+    SCHEDULES.forEach(({sport, rows, replaceOld})=>{
+      const rec = seedRecords(sport, rows);
+      if(replaceOld){
+        // 예전 일정(replaceOld에 맞는 번호)을 새 일정으로 한 번 교체합니다. 새 일정이 이미 있으면 건드리지 않습니다.
+        if(matches[Object.keys(rec)[0]]) return;
+        const olds = Object.keys(matches).filter(k=>replaceOld.test(k) && matches[k] && matches[k].sport===sport);
+        if(fbReady){
+          const upd = {};
+          olds.forEach(k=>{ upd["matches/"+k] = null; });
+          Object.keys(rec).forEach(k=>{ upd["matches/"+k] = rec[k]; });
+          db.ref().update(upd).catch(()=>{});   // 로그인하지 않았으면 규칙 때문에 거부됨 → 관리자 로그인 후 다시 시도
+        }else{
+          olds.forEach(k=>{ delete matches[k]; });
+          Object.assign(matches, rec);
+          try{ localStorage.setItem(LS_KEY, JSON.stringify(matches)); }catch(e){}
         }
+        return;
+      }
+      if(Object.values(matches).some(m=>m && m.sport===sport)) return;
+      if(fbReady){
+        Object.keys(rec).forEach(k=>{ db.ref("matches/"+k).transaction(cur=> cur || rec[k]); });
+      }else{
+        Object.assign(matches, rec);
+        try{ localStorage.setItem(LS_KEY, JSON.stringify(matches)); }catch(e){}
+      }
+    });
+  }
+
+/* ================= 상태 & 저장소 ================= */
+  let matches = {};                 // { id: {sport,date,time,place,group,round,teamA,teamB,score,winner,ts} }
+  let noticeGlobal = "";            // 대회 전체 공지사항
+  let noticeBySport = {};           // { sportId: "종목별 공지사항" }
+  let fbReady = false;
+  let volleySeeded = false;
+  let db = null;
+  let auth = null;
+  let isAdminLoggedIn = false;   // Firebase 이메일/비밀번호 로그인 여부 (관리자 전체 공용 계정)
+  const bc = ("BroadcastChannel" in window) ? new BroadcastChannel("kdsp2026_allstar") : null;
+  const LS_KEY = "kdsp2026_matches";
+  const NOTICE_G_KEY = "kdsp2026_notice_global";
+  const NOTICE_S_KEY = "kdsp2026_notice_bysport";
+  
+  function configured(){
+    return firebaseConfig.databaseURL && firebaseConfig.databaseURL.indexOf("여기에") === -1;
+  }
+
+  function initStore(){
+    if(configured()){
+      try{
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        fbReady = true;
+        auth = firebase.auth();
+        auth.onAuthStateChanged(user=>{
+          isAdminLoggedIn = !!user;
+          sportUnlocked = {};
+          admLoginErr = "";
+          admView = isAdminLoggedIn ? "pick" : "login";
+          if(isAdminLoggedIn){   // 관리자가 로그인하면 일정 등록·교체를 다시 시도 (규칙상 로그인해야 쓸 수 있음)
+            db.ref("matches").once("value").then(snap=>{ matches = snap.val() || {}; seedSchedulesIfNeeded(); });
+          }
+          if(document.getElementById("tab-admin").classList.contains("hide")===false){
+            renderAdminRoot();
+          }
+        });
+        db.ref(".info/connected").on("value", s=>{
+          setConn(s.val()===true ? "on" : "off", s.val()===true ? "실시간 연결됨" : "재연결 중…");
+        });
+        db.ref("matches").on("value", snap=>{
+          matches = snap.val() || {};
+          if(!volleySeeded){ volleySeeded = true; seedSchedulesIfNeeded(); }
+          renderAll();
+        }, err=>{
+          setConn("off","읽기 오류: "+err.code);
+        });
+        db.ref("noticeGlobal").on("value", snap=>{
+          noticeGlobal = snap.val() || "";
+          renderNoticeGlobal();
+        });
+        db.ref("noticeBySport").on("value", snap=>{
+          noticeBySport = snap.val() || {};
+          renderHome();
+        });
+        return;
+      }catch(e){
+        console.error(e);
       }
     }
+    // ---- 로컬(이 브라우저) 모드 ----
+    document.getElementById("offlineBanner").classList.remove("hide");
+    setConn("off","이 브라우저 저장 모드 (실시간 공유 안 됨)");
+    matches = readLS();
+    purgeSampleMatches();
+    seedSchedulesIfNeeded();
+    noticeGlobal = readNoticeGlobalLS();
+    noticeBySport = readNoticeSportLS();
+    window.addEventListener("storage", e=>{
+      if(e.key===LS_KEY){ matches = readLS(); renderAll(); }
+      if(e.key===NOTICE_G_KEY){ noticeGlobal = readNoticeGlobalLS(); renderNoticeGlobal(); }
+      if(e.key===NOTICE_S_KEY){ noticeBySport = readNoticeSportLS(); renderHome(); }
+    });
+    if(bc) bc.onmessage = ()=>{
+      matches = readLS(); noticeGlobal = readNoticeGlobalLS(); noticeBySport = readNoticeSportLS();
+      renderAll();
+    };
   }
-  ```
+  function readLS(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||"{}"); }catch(e){ return {}; } }
+  // 예전 버전이 넣어 둔 "OO중학교" 맛보기 샘플 경기는 실제 일정으로 대체되므로 지웁니다.
+  function purgeSampleMatches(){
+    try{
+      let changed = false;
+      Object.keys(matches).forEach(k=>{ if(matches[k] && matches[k].teamA==="OO중학교" && matches[k].teamB==="OO중학교"){ delete matches[k]; changed = true; } });
+      if(changed) localStorage.setItem(LS_KEY, JSON.stringify(matches));
+    }catch(e){}
+  }
+  function readNoticeGlobalLS(){ try{ return JSON.parse(localStorage.getItem(NOTICE_G_KEY)||'""'); }catch(e){ return ""; } }
+  function readNoticeSportLS(){ try{ return JSON.parse(localStorage.getItem(NOTICE_S_KEY)||'{}'); }catch(e){ return {}; } }
 
-  이 경우 `index.html`의 로그인 화면도 "종목 선택 → 그 종목 계정으로 로그인"하는 순서로 되돌리는 코드 수정이 함께 필요합니다 — 지금처럼 공용 계정 하나로 충분하다면 이 단계는 건너뛰어도 됩니다.
+  function setConn(cls,txt){
+    const d=document.getElementById("connDot"); d.className="dot "+cls;
+    document.getElementById("connText").textContent = txt;
+  }
 
-## 문제 해결 (FAQ)
-**Q. 관리자 탭에서 "관리자 로그인을 사용할 수 없습니다"라고 나와요.**
-→ 아직 로컬 모드입니다. STEP 3을 끝까지 완료해서 실시간 모드(Firebase 연결)로 바꿔야 로그인 기능이 켜집니다.
+  /* 저장 함수는 성공하면 true, 실패하면 false로 이행되는 Promise를 돌려주고,
+     성공 시 화면 하단에 "저장 완료" 안내(toast)를 띄웁니다. */
+  function toast(msg){
+    const old = document.getElementById("saveModal");
+    if(old) old.remove();
+    const ov = document.createElement("div");
+    ov.id = "saveModal";
+    ov.innerHTML = `<div class="save-dialog" role="alertdialog" aria-modal="true">
+      <div class="save-ico">✅</div>
+      <div class="save-msg">${escapeHtml(msg || "저장이 완료되었습니다.")}</div>
+      <button class="btn">확인</button>
+    </div>`;
+    const close = ()=>ov.remove();
+    ov.onclick = e=>{ if(e.target===ov) close(); };
+    ov.querySelector("button").onclick = close;
+    document.body.appendChild(ov);
+    ov.querySelector("button").focus();
+  }
+  function saveDone(p, failMsg){
+    return p.then(()=>{ toast("저장이 완료되었습니다."); return true; })
+      .catch(err=>{ alert(failMsg+err.message+"\n(데이터베이스 규칙을 확인하세요)"); return false; });
+  }
+  function persistMatches(){
+    if(fbReady) return saveDone(db.ref("matches").set(matches), "저장 실패: ");
+    return saveDone(new Promise(res=>{
+      localStorage.setItem(LS_KEY, JSON.stringify(matches));
+      if(bc) bc.postMessage("u"); renderAll(); res();
+    }), "저장 실패: ");
+  }
+  function saveNoticeGlobal(text){
+    const val = String(text==null ? "" : text);
+    if(fbReady) return saveDone(db.ref("noticeGlobal").set(val), "공지 저장 실패: ");
+    return saveDone(new Promise(res=>{
+      noticeGlobal = val; localStorage.setItem(NOTICE_G_KEY, JSON.stringify(val));
+      if(bc) bc.postMessage("u"); renderNoticeGlobal(); res();
+    }), "공지 저장 실패: ");
+  }
+  function saveNoticeSport(sportId, text){
+    const val = String(text==null ? "" : text);
+    if(fbReady) return saveDone(db.ref("noticeBySport/"+sportId).set(val), "공지 저장 실패: ");
+    return saveDone(new Promise(res=>{
+      if(val) noticeBySport[sportId] = val; else delete noticeBySport[sportId];
+      localStorage.setItem(NOTICE_S_KEY, JSON.stringify(noticeBySport));
+      if(bc) bc.postMessage("u"); renderHome(); res();
+    }), "공지 저장 실패: ");
+  }
 
-**Q. 로그인 시 "이메일 또는 비밀번호가 올바르지 않습니다"라고 나와요.**
-→ 3-3에서 Firebase Authentication에 등록한 이메일·비밀번호가 맞는지 확인하세요. 계정을 깜빡했다면 Firebase 콘솔 **Authentication → Users** 에서 확인·재설정할 수 있습니다.
+  function newId(){ return "m"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
-**Q. 상단이 계속 "이 브라우저 저장 모드"예요.**
-→ STEP 3의 `firebaseConfig` 값이 비어 있습니다. `databaseURL` 이 채워졌는지 확인하세요.
+  function addMatch(rec){
+    rec.ts = Date.now();
+    rec.order = Object.keys(matches).length;
+    matches[newId()] = rec;
+    persistMatches();
+  }
+  function updateMatch(id, rec){
+    if(!matches[id]) return;
+    matches[id] = Object.assign({}, matches[id], rec, {ts:Date.now()});
+    return persistMatches();
+  }
+  function deleteMatch(id){
+    delete matches[id];
+    persistMatches();
+  }
+  function moveMatch(id, dir){
+    const list = Object.entries(matches)
+      .filter(([,m])=>m.sport===matches[id].sport)
+      .sort((a,b)=>(a[1].order||0)-(b[1].order||0));
+    const idx = list.findIndex(([mid])=>mid===id);
+    const swapIdx = idx + dir;
+    if(swapIdx<0 || swapIdx>=list.length) return;
+    const a = list[idx][1].order, b = list[swapIdx][1].order;
+    matches[list[idx][0]].order = b;
+    matches[list[swapIdx][0]].order = a;
+    persistMatches();
+  }
 
-**Q. 결과 저장 시 "저장 실패 / permission denied" 경고가 떠요.**
-→ 로그인이 되어 있는지 먼저 확인하고, Realtime Database **규칙(Rules)** 을 3-4처럼 `auth != null` 로 게시했는지, **게시** 버튼을 눌렀는지 확인하세요.
+/* ================= 도우미 ================= */
+  function escapeHtml(s){
+    return String(s==null?"":s).replace(/[&<>"']/g, c=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+  function matchesOf(sportId){
+    return Object.entries(matches)
+      .filter(([,m])=>m.sport===sportId && m.stage!=="tiebreak")   // 동률 결정전 기록은 경기 목록에서 제외
+      .sort((a,b)=>(a[1].order||0)-(b[1].order||0))
+      .map(([id,m])=>[id, resolveMatch(m)]);
+  }
 
-**Q. 다른 사람 화면에 결과가 안 보여요.**
-→ 상단 표시가 "실시간 연결됨"인지 확인하세요. 로컬 모드에서는 각자 브라우저에만 저장됩니다.
+  /* ---- 배구 본선 토너먼트 팀명 자동 채우기 ----
+     "여고A조 1위팀" 같은 자리는 그 조의 경기가 모두 끝나면 순위 1·2위 학교명으로,
+     "1경기 승팀" 같은 자리는 4강 결과가 나오면 이긴 학교명으로 화면에서 자동 대체됩니다.
+     (저장된 원본 값은 바꾸지 않고 표시할 때만 바꿉니다.)
+     조 순위는 아래 volleyStandings 기준을 따르며, 1·2위가 동률이면 자동 입력하지 않습니다. */
+  /* 배구 조·풀리그 순위: 승점(승 2점·패 1점) → 점수 득실율(득점÷실점) → 세트 득실 → 승자승, 높은 값이 상위
+     기권·몰수 경기는 승은 인정하고 세트는 2:0으로 계산하되 점수(율) 환산에는 넣지 않습니다. */
+  function volleyStandings(matchList){
+    const t = {};
+    const get = n => t[n] || (t[n] = {team:n, g:0, w:0, l:0, pts:0, sw:0, sl:0, pf:0, pa:0, h2h:{}});
+    matchList.forEach(m=>{
+      if(m.winner!=="A" && m.winner!=="B") return;
+      const a = get(m.teamA), b = get(m.teamB);
+      const win = m.winner==="A" ? a : b, lose = m.winner==="A" ? b : a;
+      win.g++; lose.g++; win.w++; lose.l++; win.pts += 2; lose.pts += 1;
+      win.h2h[lose.team] = (win.h2h[lose.team]||0) + 1;   // 승자승 기록
+      if(m.forfeit){ win.sw += 2; lose.sl += 2; return; }  // 기권·몰수: 세트 2:0, 점수율 환산 미적용
+      (m.sets||[]).forEach(s=>{
+        if(s.a==="" || s.b==="" || s.a==null || s.b==null) return;
+        const na = Number(s.a), nb = Number(s.b);
+        a.pf += na; a.pa += nb; b.pf += nb; b.pa += na;
+        if(na>nb){ a.sw++; b.sl++; } else if(nb>na){ b.sw++; a.sl++; }
+      });
+    });
+    const rows = Object.values(t);
+    rows.forEach(x=>{
+      x.ratio = x.pa>0 ? Math.round(x.pf/x.pa*1e9)/1e9 : (x.pf>0 ? 1e9 : 0);   // 점수 득실율 = 득점 ÷ 실점
+      x.sd = x.sw - x.sl;                                                       // 세트 득실
+      x.key = [x.pts, x.ratio, x.sd].join("|");
+    });
+    rows.forEach(x=>{   // 승점·점수율·세트득실이 같은 팀끼리의 맞대결 승수
+      x.h2hWins = rows.filter(y=>y!==x && y.key===x.key).reduce((n,y)=>n+(x.h2h[y.team]||0), 0);
+    });
+    rows.sort((x,y)=> (y.pts-x.pts) || (y.ratio-x.ratio) || (y.sd-x.sd) || (y.h2hWins-x.h2hWins));
+    let rank = 0;
+    rows.forEach((x,i)=>{
+      const p = rows[i-1];
+      if(i===0 || x.key!==p.key || x.h2hWins!==p.h2hWins) rank = i+1;
+      x.rank = rank;
+      x.tie = rows.some(y=>y!==x && y.key===x.key && y.h2hWins===x.h2hWins);
+    });
+    return rows;
+  }
+  function renderVolleyStandings(matchList){
+    const rows = volleyStandings(matchList);
+    if(!rows.length) return "";
+    const fmtRatio = r => r.pa>0 ? r.ratio.toFixed(3) : (r.pf>0 ? "∞" : "-");
+    const anyTie = rows.some(r=>r.tie);
+    return `<div class="table-wrap"><table class="group-table standings">
+      <thead><tr><th>순위</th><th>학교</th><th>경기</th><th>승</th><th>패</th><th>승점</th><th>점수율</th><th>세트득실</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td class="gt-when">${r.rank}${r.tie?"*":""}</td>
+        <td style="text-align:left;font-weight:800">${escapeHtml(r.team)}</td>
+        <td class="gt-when">${r.g}</td><td class="gt-when">${r.w}</td><td class="gt-when">${r.l}</td>
+        <td class="gt-when"><b>${r.pts}</b></td><td class="gt-when">${fmtRatio(r)}</td>
+        <td class="gt-when">${r.sd>0?"+":""}${r.sd}</td>
+      </tr>`).join("")}</tbody></table></div>
+      <div class="standings-note">승점(승 2점·패 1점) → 점수 득실율(득점÷실점) → 세트 득실 → 승자승 순 (높은 값이 상위)<br>기권·몰수 경기는 승은 인정하되 점수율 환산 미적용${anyTie ? `<br>* 모든 기준이 같아 순위가 정해지지 않은 동률입니다.` : ""}</div>`;
+  }
+  function poolStanding(sportId, division, pool){
+    const list = Object.values(matches).filter(m=>m.sport===sportId && (m.stage||"group")==="group"
+      && m.group===division && m.pool===pool);
+    if(!list.length || list.some(m=>!m.winner || m.winner==="D")) return null;
+    const rows = volleyStandings(list);
+    // 상위 2팀의 순위가 확정될 때만 사용 (동률이면 보류)
+    for(let i=0;i<Math.min(2,rows.length);i++) if(rows[i].tie) return null;
+    return rows;
+  }
+  /* ---- 3X3 농구 조 순위 ----
+     ① 승수 → 승수가 같은 팀이 둘 이상이면 ② 해당 팀들 간 상대 전적 → ③ 해당 팀들 간 평균 득점
+     → ④ 해당 조 내 평균 득점 → ⑤ 승부 던지기(관리자가 결과 입력). 높은 값이 상위.
+     ②~④로 일부만 가려지면 남은 동률 팀끼리 다시 ②부터 적용합니다.
+     점수는 "10:5" 처럼 (팀A 점수):(팀B 점수) 형식으로 입력해야 평균 득점이 계산됩니다. */
+  function parseScore(s){
+    const m = String(s||"").match(/(\d+)\s*[:：\-~]\s*(\d+)/);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  }
+  function threeStandings(matchList, tbRanks, mode){
+    const complete = matchList.length>0 && matchList.every(m=>m.winner==="A" || m.winner==="B");
+    const teams = [];
+    matchList.forEach(m=>[m.teamA, m.teamB].forEach(n=>{ if(n && !teams.includes(n)) teams.push(n); }));
+    const recs = matchList.filter(m=>m.winner==="A" || m.winner==="B").map(m=>{
+      const sc = parseScore(m.score);
+      return {a:m.teamA, b:m.teamB, w:m.winner==="A"?m.teamA:m.teamB, l:m.winner==="A"?m.teamB:m.teamA,
+        pa:sc?sc[0]:null, pb:sc?sc[1]:null};
+    });
+    const wins = t => recs.filter(r=>r.w===t).length;
+    const losses = t => recs.filter(r=>r.l===t).length;
+    const h2h = (t, set) => recs.filter(r=>r.w===t && set.has(r.l)).length;
+    const avgPts = (t, set) => {
+      const pts = [];
+      recs.forEach(r=>{
+        if(r.a!==t && r.b!==t) return;
+        if(set && !(set.has(r.a) && set.has(r.b))) return;
+        const own = r.a===t ? r.pa : r.pb;
+        if(own!=null) pts.push(own);
+      });
+      return pts.length ? pts.reduce((x,y)=>x+y,0)/pts.length : 0;
+    };
+    // 농구: 득점(sumPts)·득실(diffPts) — set이 있으면 그 팀들 간 경기만, null이면 조 전체 경기
+    const sumPts = (t, set) => {
+      let n = 0;
+      recs.forEach(r=>{
+        if(r.a!==t && r.b!==t) return;
+        if(set && !(set.has(r.a) && set.has(r.b))) return;
+        const own = r.a===t ? r.pa : r.pb;
+        if(own!=null) n += own;
+      });
+      return n;
+    };
+    const diffPts = (t, set) => {
+      let n = 0;
+      recs.forEach(r=>{
+        if(r.a!==t && r.b!==t) return;
+        if(set && !(set.has(r.a) && set.has(r.b))) return;
+        if(r.pa==null) return;
+        n += r.a===t ? r.pa-r.pb : r.pb-r.pa;
+      });
+      return n;
+    };
+    const partition = (arr, f)=>{
+      const v = arr.map(t=>({t, v:Math.round(f(t)*1e6)/1e6})).sort((x,y)=>y.v-x.v);
+      const tiers = [];
+      v.forEach((x,i)=>{ if(i && x.v===v[i-1].v) tiers[tiers.length-1].push(x.t); else tiers.push([x.t]); });
+      return tiers;
+    };
+    const breakTie = g => {
+      if(g.length<2) return [g];
+      const set = new Set(g);
+      const fs = mode==="basketball"
+        ? [t=>h2h(t,set), t=>diffPts(t,set), t=>sumPts(t,set), t=>diffPts(t,null), t=>sumPts(t,null)]
+        : [t=>h2h(t,set), t=>avgPts(t,set), t=>avgPts(t,null)];
+      for(const f of fs){
+        const tiers = partition(g, f);
+        if(tiers.length>1) return tiers.flatMap(breakTie);
+      }
+      return [g];
+    };
+    const tiers = partition(teams, wins).flatMap(breakTie);
+    const rows = [];
+    let rank = 1;
+    tiers.forEach((tier, ti)=>{
+      let order = tier, tb = false;
+      const unresolved = tier.length>1 && complete;
+      if(unresolved && tbRanks){
+        const rs = tier.map(t=>Number(tbRanks[t]));
+        if(rs.every(r=>r>=1 && r<=tier.length) && new Set(rs).size===tier.length){
+          order = tier.slice().sort((x,y)=>tbRanks[x]-tbRanks[y]); tb = true;
+        }
+      }
+      order.forEach((t,i)=>{
+        rows.push({team:t, g:wins(t)+losses(t), w:wins(t), l:losses(t), avg:avgPts(t,null), pf:sumPts(t,null), pd:diffPts(t,null),
+          rank: tb ? rank+i : rank, tie: unresolved && !tb, tb:tb, tier:ti});
+      });
+      rank += tier.length;
+    });
+    return {rows:rows, complete:complete, played:recs.length};
+  }
+  function renderThreeStandings(matchList, tbRanks, mode){
+    const st = threeStandings(matchList, tbRanks, mode);
+    const bk = mode==="basketball";
+    if(!st.played) return "";
+    const anyTie = st.rows.some(r=>r.tie);
+    return `<div class="table-wrap"><table class="group-table standings">
+      <thead><tr><th>순위</th><th>학교</th><th>경기</th><th>승</th><th>패</th>${bk ? "<th>득실</th><th>득점</th>" : "<th>평균득점</th>"}</tr></thead>
+      <tbody>${st.rows.map(r=>`<tr>
+        <td class="gt-when">${r.rank}${r.tie?"*":""}${r.tb?"†":""}</td>
+        <td style="text-align:left;font-weight:800">${escapeHtml(r.team)}</td>
+        <td class="gt-when">${r.g}</td><td class="gt-when">${r.w}</td><td class="gt-when">${r.l}</td>
+        ${bk ? `<td class="gt-when">${r.pd>0?"+":""}${r.pd}</td><td class="gt-when">${r.pf}</td>` : `<td class="gt-when">${r.avg.toFixed(1)}</td>`}
+      </tr>`).join("")}</tbody></table></div>
+      <div class="standings-note">${bk ? "승패가 같은 팀들끼리 → 상대 전적 → 해당 팀들 간 득실 → 해당 팀들 간 다득점 → 조 내 득실 → 조 내 다득점 → 승자 뽑기 순" : "승수가 같으면 → 해당 팀들 간 상대 전적 → 해당 팀들 간 평균 득점 → 해당 조 내 평균 득점 → 승부 던지기 순 (평균 득점은 조 전체 경기 기준)"}${anyTie ? `<br>* 모든 기준이 같아 승부 던지기로 순위를 결정해야 합니다.` : ""}${st.rows.some(r=>r.tb) ? `<br>† 승부 던지기 결과로 순위가 결정되었습니다.` : ""}</div>`;
+  }
+  // 본선 대진표의 "A조 1위" 자리: 그 조 경기가 모두 끝나고 순위가 확정되면 학교명으로 대체
+  function threePoolRank(sportId, division, pool, rank){
+    const list = Object.values(matches).filter(m=>m.sport===sportId && (m.stage||"group")==="group" && m.group===division && m.pool===pool);
+    if(!list.length || list.some(m=>m.winner!=="A" && m.winner!=="B")) return null;
+    const rows = threeStandings(list, tiebreakRanks(division, pool), sportId).rows;
+    const r = rows.find(x=>x.rank===rank);
+    return r && !r.tie ? r.team : null;
+  }
 
-**Q. GitHub Pages 주소가 404예요.**
-→ 1~2분 기다렸다가 새로고침. Settings → Pages에서 Branch가 `main`인지 확인하세요.
+  /* ---- 배드민턴 조(리그) 순위 ----
+     ① 승점: 승 2점 · 패 1점 (경기 승패는 1~3세트 득점 합산이 높은 팀이 승리)
+     승점이 같으면 ② 총득점(조 경기에서 낸 득점 합) 높은 팀 ③ 세트 득실차 ④ 점수 득실차(득점−실점, 큰 팀 상위)
+     ④까지 같으면 새로운 복식조를 구성해 복식 1경기로 결정(화면에 "동률" 표시 — 결과는 관리자가 확인 후 안내) */
+  // 복식 1경기(동률 결정전) 결과는 경기 목록에 나오지 않는 특수 기록(stage:"tiebreak")으로 저장합니다.
+  function tbId(division, pool){ return "tb_"+division+"_"+(pool||"L"); }
+  function tiebreakRanks(division, pool){
+    const rec = matches[tbId(division, pool)];
+    return (rec && rec.ranks) || null;
+  }
+  function badmintonStandings(matchList, tbRanks){
+    const t = {};
+    const get = n => t[n] || (t[n] = {team:n, g:0, w:0, l:0, pts:0, pf:0, pa:0, sw:0, sl:0});
+    matchList.forEach(m=>{
+      if(m.winner!=="A" && m.winner!=="B") return;
+      const a = get(m.teamA), b = get(m.teamB);
+      const win = m.winner==="A" ? a : b, lose = m.winner==="A" ? b : a;
+      win.g++; lose.g++; win.w++; lose.l++; win.pts += 2; lose.pts += 1;
+      (m.sets||[]).forEach(s=>{
+        if(s.a==="" || s.b==="" || s.a==null || s.b==null) return;
+        const na = Number(s.a), nb = Number(s.b);
+        a.pf += na; a.pa += nb; b.pf += nb; b.pa += na;
+        if(na>nb){ a.sw++; b.sl++; } else if(nb>na){ b.sw++; a.sl++; }
+      });
+    });
+    const rows = Object.values(t);
+    rows.forEach(x=>{
+      x.sd = x.sw - x.sl; x.pd = x.pf - x.pa;
+      x.key = [x.pts, x.pf, x.sd, x.pd].join("|");
+    });
+    rows.sort((x,y)=> (y.pts-x.pts) || (y.pf-x.pf) || (y.sd-x.sd) || (y.pd-x.pd));
+    let rank = 0;
+    rows.forEach((x,i)=>{
+      if(i===0 || x.key!==rows[i-1].key) rank = i+1;
+      x.rank = rank;
+      x.tie = rows.some(y=>y!==x && y.key===x.key);
+    });
+    // 동률 팀들의 복식 1경기 순위가 모두 입력되어 있으면 그 순서로 확정
+    if(tbRanks){
+      const done = new Set();
+      rows.forEach(x=>{
+        if(!x.tie || done.has(x.key)) return;
+        done.add(x.key);
+        const grp = rows.filter(y=>y.key===x.key);
+        const rs = grp.map(y=>Number(tbRanks[y.team]));
+        if(rs.every(r=>r>=1 && r<=grp.length) && new Set(rs).size===grp.length){
+          const base = Math.min(...grp.map(y=>y.rank));
+          grp.forEach(y=>{ y.rank = base + Number(tbRanks[y.team]) - 1; y.tie = false; y.tb = true; });
+        }
+      });
+      rows.sort((x,y)=>x.rank-y.rank);
+    }
+    return rows;
+  }
+  function renderBadmintonStandings(matchList, tbRanks){
+    const rows = badmintonStandings(matchList, tbRanks);
+    if(!rows.length) return "";
+    const anyTie = rows.some(r=>r.tie);
+    return `<div class="table-wrap"><table class="group-table standings">
+      <thead><tr><th>순위</th><th>학교</th><th>경기</th><th>승</th><th>패</th><th>승점</th><th>총득점</th><th>세트득실</th><th>점수득실</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td class="gt-when">${r.rank}${r.tie?"*":""}${r.tb?"†":""}</td>
+        <td style="text-align:left;font-weight:800">${escapeHtml(r.team)}</td>
+        <td class="gt-when">${r.g}</td><td class="gt-when">${r.w}</td><td class="gt-when">${r.l}</td>
+        <td class="gt-when"><b>${r.pts}</b></td><td class="gt-when">${r.pf}</td>
+        <td class="gt-when">${r.sd>0?"+":""}${r.sd}</td><td class="gt-when">${r.pd>0?"+":""}${r.pd}</td>
+      </tr>`).join("")}</tbody></table></div>
+      <div class="standings-note">승점(승 2점·패 1점) → 총득점 → 세트 득실차 → 점수 득실차 순${anyTie ? `<br>* 모든 기준이 같은 동률 팀은 새로운 복식조로 복식 1경기를 진행해 순위를 결정합니다.` : ""}${rows.some(r=>r.tb) ? `<br>† 복식 1경기 결과로 순위가 결정되었습니다.` : ""}</div>`;
+  }
+
+  function resolveMatch(m){
+    if(!m || (m.sport!=="volleyball" && m.sport!=="three" && m.sport!=="basketball") || m.stage!=="final") return m;
+    const r = Object.assign({}, m);
+    ["teamA","teamB"].forEach(k=>{
+      const name = (m[k]||"").trim();
+      if(m.sport==="three" || m.sport==="basketball"){
+        const mp = name.match(/^([A-F])조\s*(\d)위$/);
+        if(mp){ const t = threePoolRank(m.sport, m.group, mp[1], Number(mp[2])); if(t) r[k] = t; return; }
+      }
+      let mm = name.match(/^(.+?)\s*([A-D1-4])조\s*(\d)위팀$/);
+      if(mm && mm[1]===m.group){
+        const st = poolStanding(m.sport, m.group, mm[2]);
+        if(st && st[Number(mm[3])-1]) r[k] = st[Number(mm[3])-1].team;
+        return;
+      }
+      mm = name.match(/^(?:(\d강)\s*)?(\d)경기\s*승팀$/);   // "1경기 승팀"(=4강) · 3X3: "6강 1경기 승팀"
+      if(mm){
+        const src = Object.values(matches).find(x=>x.sport===m.sport && x.group===m.group && x.round===((mm[1]||"4강")+" "+mm[2]+"경기"));
+        if(src && (src.winner==="A" || src.winner==="B")){
+          const rs = resolveMatch(src);
+          r[k] = src.winner==="A" ? rs.teamA : rs.teamB;
+        }
+      }
+    });
+    return r;
+  }
+  function lastUpdated(){
+    let t=0; Object.values(matches).forEach(m=>{ if(m&&m.ts&&m.ts>t) t=m.ts; });
+    return t;
+  }
+
+/* ================= 렌더 ================= */
+  let curSport = null;         // null = 종목 선택 화면
+  let schedFilter = "전체";
+  let schedStage = "group";    // 농구·3X3 농구 전용: 조별예선/본선 토너먼트
+  let schedDivision = null;    // 농구·3X3 농구 전용: 세부 구분(부문)
+  let schedPool = "A";         // 농구·3X3 농구 조별예선 전용: A~F조
+  let schedMode = "schedule";  // 'schedule' | 'search'
+  let schedSearchQuery = "";   // 검색 탭에 입력한 학교 이름
+
+  let admView = "login";       // 'login' | 'pick' | 'panel'
+  let admSelSport = null;      // 관리자 화면에서 선택된 종목
+  // 종목별 관리자 2차 비밀번호 (Firebase 로그인 후 종목 진입 시 추가 확인)
+  // ※ 화면 단 확인용입니다. 실제 저장 권한은 Firebase 로그인으로만 통제됩니다.
+  const SPORT_CODES = { volleyball:"1220", badminton:"0924", basketball:"9079" };
+  const SPORT_CODE_GROUP = { volleyball:"volleyball", badminton:"badminton", basketball:"basketball", three:"basketball" }; // 농구·3X3 공용
+  let sportUnlocked = {};      // 이번 로그인 세션에서 통과한 종목 그룹
+  let pendingSport = null;
+  let admLoginErr = "";        // 로그인 실패 메시지
+  let admStage = "group";      // 관리자 화면에서 선택된 조별예선/본선 (농구·3X3 농구 전용)
+  let admDivision = null;      // 관리자 화면에서 선택된 세부 구분(부문) (농구·3X3 농구 전용)
+  let sedStage = "group", sedDivision = null, sedPool = null, sedMatchId = "";   // 경기 일정 수정 영역의 선택값
+  let admPool = "A";          // 관리자 화면에서 선택된 A~F조 (농구·3X3 농구 조별예선 전용)
+
+  function renderAll(){
+    renderLastUpd();
+    renderNoticeGlobal();
+    renderHome();
+    if(document.getElementById("tab-search").classList.contains("hide")===false){
+      renderGlobalSearch();
+    }
+    if(document.getElementById("tab-admin").classList.contains("hide")===false){
+      renderAdminRoot();
+    }
+  }
+
+  function renderLastUpd(){
+    const t = lastUpdated();
+    document.getElementById("lastUpd").textContent = t
+      ? "마지막 갱신 " + new Date(t).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})
+      : "등록된 경기 없음";
+  }
+
+  function renderNoticeGlobal(){
+    const box = document.getElementById("noticeBoxGlobal");
+    if(!box) return;
+    const txt = (noticeGlobal||"").trim();
+    box.innerHTML = `<h3>📢 대회 전체 공지사항</h3>` +
+      (txt ? `<div class="notice-body">${escapeHtml(txt)}</div>`
+           : `<div class="empty">등록된 공지 사항이 없습니다.</div>`);
+    const ni = document.getElementById("noticeInput");
+    if(ni && document.activeElement !== ni) ni.value = noticeGlobal || "";
+  }
+
+  function pill(list, cur){
+    return list.map(x=>`<button class="${x===cur?"active":""}" data-v="${escapeHtml(x)}">${escapeHtml(x)}</button>`).join("");
+  }
+
+  function renderHome(){
+    const box = document.getElementById("homeContent");
+    if(curSport === null){
+      box.innerHTML = `<div class="sport-grid">${SPORTS.map(s=>{
+        const list = matchesOf(s.id);
+        const done = list.filter(([,m])=>m.winner).length;
+        return `<div class="sport-card" data-s="${s.id}">
+          <span class="emoji">${s.icon()}</span>
+          <div class="nm">${s.name}</div>
+          <div class="cnt">${list.length}경기 · 종료 ${done}</div>
+        </div>`;
+      }).join("")}</div>`;
+      box.querySelectorAll(".sport-card").forEach(c=>{
+        c.onclick = ()=>{ curSport=c.dataset.s; schedFilter="전체"; schedStage="group"; schedDivision=null; schedPool="A"; schedMode="schedule"; schedSearchQuery=""; renderHome(); };
+      });
+      return;
+    }
+
+    const sport = sportById[curSport];
+    const hasStage = STAGE_SPORTS.has(curSport);
+    const divisions = hasStage ? divisionsFor(curSport, schedStage) : null;
+    if(hasStage && (!schedDivision || !divisions.includes(schedDivision))) schedDivision = divisions[0];
+    const sNotice = (noticeBySport[curSport]||"").trim();
+
+    // 조별예선/본선 토너먼트(농구·3X3) 또는 일정(그 외) + 검색, 항상 마지막에 검색 탭
+    const modeButtons = hasStage
+      ? stagesFor(curSport).map(st=>({id:st.id, label:st.name, kind:"stage"})).concat([{id:"search", label:"🔍 검색", kind:"search"}])
+      : [{id:"schedule", label:"일정", kind:"schedule"}, {id:"search", label:"🔍 검색", kind:"search"}];
+
+    let html = `<div class="back-row">
+      <button class="back-btn" id="backHome">← 종목 선택</button>
+      <div class="sport-title"><span class="emoji-inline">${sport.icon()}</span> ${sport.name}</div>
+    </div>`;
+    html += `<div class="notice-box sport"><h3>📢 ${escapeHtml(sport.name)} 종목 공지사항</h3>` +
+      (sNotice ? `<div class="notice-body">${escapeHtml(sNotice)}</div>`
+               : `<div class="empty">등록된 공지 사항이 없습니다.</div>`) + `</div>`;
+    html += `<div class="stage-tabs" id="modeTabs">${modeButtons.map(b=>{
+      const active = b.kind==="search" ? schedMode==="search" : (schedMode!=="search" && (b.kind!=="stage" || b.id===schedStage));
+      return `<button class="${active?"active":""}" data-kind="${b.kind}" data-v="${b.id}">${b.label}</button>`;
+    }).join("")}</div>`;
+
+    const inGroupStage = hasStage && schedStage==="group";
+
+    if(schedMode==="search"){
+      html += `<div class="search-box"><input id="schoolSearch" type="text" placeholder="학교 이름을 입력하세요 (예: 방이중)" value="${escapeHtml(schedSearchQuery)}"></div>`;
+      html += `<div id="searchResults"></div>`;
+    }else if(inGroupStage){
+      // 조별예선: 구분(부문) → 조(구분별로 개수가 다름) → 표
+      const pools = poolsFor(curSport, schedDivision);
+      if(!pools.includes(schedPool)) schedPool = pools[0];
+      html += `<div class="filters" id="divTabs">${divisions.map(d=>
+        `<button class="${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
+      ).join("")}</div>`;
+      if(showPoolTabs(curSport, schedDivision)){
+        html += `<div class="filters" id="poolTabs">${pools.map(p=>
+          `<button class="${p===schedPool?"active":""}" data-v="${p}">${p}조</button>`
+        ).join("")}</div>`;
+      }
+      let list = matchesOf(curSport)
+        .filter(([,m])=> (m.stage||"group") === "group")
+        .filter(([,m])=> (m.group||"") === schedDivision)
+        .filter(([,m])=> (m.pool||"") === schedPool);
+      html += renderGroupTable(list);
+      if(curSport==="badminton") html += renderBadmintonStandings(list.map(([,m])=>m), tiebreakRanks(schedDivision, schedPool));
+      if(curSport==="volleyball") html += renderVolleyStandings(list.map(([,m])=>m));
+      if(curSport==="three" || curSport==="basketball") html += renderThreeStandings(list.map(([,m])=>m), tiebreakRanks(schedDivision, schedPool), curSport);
+    }else if(hasStage && schedStage==="league"){
+      // 풀리그: 구분(부문) → 표
+      html += `<div class="filters" id="divTabs">${divisions.map(d=>
+        `<button class="${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
+      ).join("")}</div>`;
+      const list = matchesOf(curSport)
+        .filter(([,m])=> m.stage === "league")
+        .filter(([,m])=> (m.group||"") === schedDivision);
+      html += renderGroupTable(list);
+      if(curSport==="badminton") html += renderBadmintonStandings(list.map(([,m])=>m), tiebreakRanks(schedDivision, ""));
+      if(curSport==="volleyball") html += renderVolleyStandings(list.map(([,m])=>m));
+    }else if(hasStage){
+      // 본선 토너먼트: 구분(부문) → 대진표(농구·3X3은 8강부터, 배구는 4강부터)
+      html += `<div class="filters" id="divTabs">${divisions.map(d=>
+        `<button class="${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
+      ).join("")}</div>`;
+      const list = matchesOf(curSport)
+        .filter(([,m])=> (m.stage||"group") === "final")
+        .filter(([,m])=> (m.group||"") === schedDivision);
+      html += renderBracket(list, bracketRoundsFor(curSport, schedDivision));
+    }else{
+      let list = matchesOf(curSport);
+      const dates = [...new Set(list.map(([,m])=>m.date).filter(Boolean))];
+      html += `<div class="filters" id="schedFilters">${pill(["전체",...dates], schedFilter)}</div>`;
+
+      if(!list.length){
+        html += `<div class="empty-msg">아직 등록된 경기가 없습니다.<br>관리자 탭에서 경기를 등록해 주세요.</div>`;
+      }else{
+        const shown = schedFilter==="전체" ? dates : [schedFilter];
+        const groups = (schedFilter==="전체" ? dates : shown).length ? shown : ["미정"];
+        html += groups.map(d=>{
+          const ms = list.filter(([,m])=> (m.date||"미정") === d || (!m.date && d==="미정"));
+          if(!ms.length) return "";
+          return `<div class="day"><h2>${escapeHtml(d)} · ${ms.length}경기</h2>${ms.map(([id,m])=>matchCard(m)).join("")}</div>`;
+        }).join("");
+      }
+    }
+
+    box.innerHTML = html;
+    document.getElementById("backHome").onclick = ()=>{ curSport=null; renderHome(); };
+    document.getElementById("modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+      if(b.dataset.kind==="stage"){ schedStage=b.dataset.v; schedMode="schedule"; schedFilter="전체"; }
+      else if(b.dataset.kind==="schedule"){ schedMode="schedule"; }
+      else{ schedMode="search"; }
+      renderHome();
+    });
+    const dvEl = document.getElementById("divTabs");
+    if(dvEl) dvEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{ schedDivision=b.dataset.v; schedFilter="전체"; renderHome(); });
+    const pEl = document.getElementById("poolTabs");
+    if(pEl) pEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{ schedPool=b.dataset.v; renderHome(); });
+    const fEl = document.getElementById("schedFilters");
+    if(fEl) fEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{ schedFilter=b.dataset.v; renderHome(); });
+    if(schedMode==="search"){
+      const si = document.getElementById("schoolSearch");
+      if(si){
+        si.oninput = ()=>{ schedSearchQuery = si.value; renderSearchResults(); };
+        si.focus();
+        si.setSelectionRange(si.value.length, si.value.length);
+      }
+      renderSearchResults();
+    }
+  }
+
+  function renderSearchResults(){
+    const wrap = document.getElementById("searchResults");
+    if(!wrap) return;
+    const q = schedSearchQuery.trim();
+    const hasStage = STAGE_SPORTS.has(curSport);
+    if(!q){
+      wrap.innerHTML = `<div class="empty-msg">학교 이름을 입력하면 그 학교의 경기를 모아서 보여드려요.</div>`;
+      return;
+    }
+    const qLower = q.toLowerCase();
+    const found = matchesOf(curSport).filter(([,m])=>
+      (m.teamA||"").toLowerCase().includes(qLower) || (m.teamB||"").toLowerCase().includes(qLower)
+    );
+    if(!found.length){
+      wrap.innerHTML = `<div class="empty-msg">"${escapeHtml(q)}" 학교의 경기를 찾을 수 없습니다.</div>`;
+      return;
+    }
+    wrap.innerHTML = found.map(([id,m])=>{
+      const stageName = hasStage ? stageLabel(m.sport, m.stage||"group") : null;
+      return matchCard(m, {showDate:true, stageName});
+    }).join("");
+  }
+
+  /* ---- 전체 종목 통합검색 (상단 "🔍 통합검색" 탭) ----
+     학교 이름을 입력하면 농구·3X3 농구·배구·배드민턴 전체에서 그 학교가 나오는 경기를 모아 보여줍니다. */
+  let globalSearchQuery = "";
+  function renderGlobalSearch(){
+    const box = document.getElementById("globalSearchContent");
+    if(!box) return;
+    box.innerHTML = `
+      <div class="sport-title" style="margin-bottom:12px"><span class="emoji-inline">🔍</span> 전체 종목 통합검색</div>
+      <div class="search-box"><input id="globalSearchInput" type="text" placeholder="학교 이름을 입력하세요 (예: 방이중)" value="${escapeHtml(globalSearchQuery)}"></div>
+      <div id="globalSearchResults"></div>
+    `;
+    const si = document.getElementById("globalSearchInput");
+    si.oninput = ()=>{ globalSearchQuery = si.value; renderGlobalSearchResults(); };
+    si.focus();
+    si.setSelectionRange(si.value.length, si.value.length);
+    renderGlobalSearchResults();
+  }
+  function renderGlobalSearchResults(){
+    const wrap = document.getElementById("globalSearchResults");
+    if(!wrap) return;
+    const q = globalSearchQuery.trim();
+    if(!q){
+      wrap.innerHTML = `<div class="empty-msg">학교 이름을 입력하면 모든 종목에서 그 학교가 나오는 경기를 전부 모아서 보여드려요.</div>`;
+      return;
+    }
+    const qLower = q.toLowerCase();
+    const bySport = SPORTS.map(s=>{
+      const hasStage = STAGE_SPORTS.has(s.id);
+      const found = matchesOf(s.id).filter(([,m])=>
+        (m.teamA||"").toLowerCase().includes(qLower) || (m.teamB||"").toLowerCase().includes(qLower)
+      );
+      return {sport:s, found, hasStage};
+    }).filter(x=>x.found.length);
+    if(!bySport.length){
+      wrap.innerHTML = `<div class="empty-msg">"${escapeHtml(q)}" 학교의 경기를 찾을 수 없습니다.</div>`;
+      return;
+    }
+    wrap.innerHTML = bySport.map(({sport, found, hasStage})=>{
+      const cards = found.map(([id,m])=>{
+        const stageName = hasStage ? stageLabel(m.sport, m.stage||"group") : null;
+        return matchCard(m, {showDate:true, stageName});
+      }).join("");
+      return `<div class="day"><h2><span class="emoji-inline">${sport.icon()}</span> ${escapeHtml(sport.name)} · ${found.length}경기</h2>${cards}</div>`;
+    }).join("");
+  }
+
+  function renderGroupTable(list){
+    if(!list.length){
+      return `<div class="empty-msg">아직 등록된 경기가 없습니다.<br>관리자 탭에서 경기를 등록해 주세요.</div>`;
+    }
+    const rows = list.map(([id,m])=>{
+      const isDone = !!m.winner;
+      const aWin = m.winner==="A", bWin = m.winner==="B", draw = m.winner==="D";
+      const teamsHtml = m.score
+        ? `<div class="gt-teams">
+            <span class="team-name ${aWin?"win":(draw?"draw":"")}">${escapeHtml(m.teamA||"미정")}</span>
+            <span class="gt-score">${escapeHtml(m.score)}</span>
+            <span class="team-name ${bWin?"win":(draw?"draw":"")}">${escapeHtml(m.teamB||"미정")}</span>
+          </div>`
+        : `<div class="gt-teams">
+            <span class="team-name">${escapeHtml(m.teamA||"미정")}</span>
+            <span class="gt-vs">VS</span>
+            <span class="team-name">${escapeHtml(m.teamB||"미정")}</span>
+          </div>`;
+      return `<tr>
+        <td class="gt-when">${escapeHtml(m.date||"-")}${m.time?`<br>${escapeHtml(m.time)}`:""}</td>
+        <td class="gt-where">${escapeHtml(m.place||"-")}</td>
+        <td class="gt-result">${teamsHtml}${m.detail?`<span class="gt-detail">${escapeHtml(m.detail)}</span>`:""}<span class="gt-status">${isDone?"종료":"예정"}</span></td>
+      </tr>`;
+    }).join("");
+    return `<div class="table-wrap"><table class="group-table">
+      <thead><tr><th>일시</th><th>장소</th><th>결과</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+  }
+
+  function bracketEmptySlot(label){
+    return `<div class="match bracket-empty">
+      <div class="meta"><span class="badge round">${escapeHtml(label)}</span><span class="badge">미정</span></div>
+      <div class="row">
+        <div class="team">미정</div>
+        <span class="score"><span class="vs">VS</span></span>
+        <div class="team right">미정</div>
+      </div>
+    </div>`;
+  }
+
+  function renderBracket(list, rounds){
+    const slots = rounds.flatMap(r=>r.slots);
+    const bySlot = {};
+    list.forEach(([id,m])=>{
+      if(m.round && slots.includes(m.round) && !bySlot[m.round]) bySlot[m.round] = m;
+    });
+    return rounds.map((rnd, i)=>{
+      const body = rnd.slots.map(slot => bySlot[slot] ? matchCard(bySlot[slot], {showDate:true}) : bracketEmptySlot(slot)).join("");
+      const arrow = i < rounds.length-1 ? `<div class="bracket-arrow">⌄</div>` : "";
+      return `<div class="bracket-round"><h3>${rnd.name}</h3>${body}</div>${arrow}`;
+    }).join("");
+  }
+
+  function matchCard(m, opts){
+    opts = opts || {};
+    const isDone = !!m.winner;
+    const statusBadge = isDone ? `<span class="badge done">종료</span>` : `<span class="badge">예정</span>`;
+    const aWin = m.winner==="A", bWin = m.winner==="B", draw = m.winner==="D";
+    const scoreHtml = m.score
+      ? `<span class="score">${escapeHtml(m.score)}</span>`
+      : `<span class="score"><span class="vs">VS</span></span>`;
+    return `<div class="match">
+      <div class="meta">
+        ${opts.showDate && m.date ? `<span class="badge">${escapeHtml(m.date)}</span>`:""}
+        ${opts.stageName ? `<span class="badge">${escapeHtml(opts.stageName)}</span>`:""}
+        ${m.group ? `<span class="badge">${escapeHtml(m.group)}</span>`:""}
+        ${m.round ? `<span class="badge round">${escapeHtml(m.round)}</span>`:""}
+        <span>${escapeHtml(m.time||"")}</span>
+        ${statusBadge}
+      </div>
+      <div class="row">
+        <div class="team ${aWin?"win":(draw?"draw":"")}">${escapeHtml(m.teamA||"미정")}</div>
+        ${scoreHtml}
+        <div class="team right ${bWin?"win":(draw?"draw":"")}">${escapeHtml(m.teamB||"미정")}</div>
+      </div>
+      ${m.detail ? `<div class="detail">${escapeHtml(m.detail)}</div>` : ""}
+      ${m.place ? `<div class="place">📍 ${escapeHtml(m.place)}</div>` : ""}
+    </div>`;
+  }
+
+/* ================= 관리자 =================
+   흐름: 관리자 전체 공용 계정으로 이메일 로그인(login) → 종목 선택(pick) → 종목별 관리 화면(panel)
+   로그인 여부는 Firebase Authentication이 관리하며, Realtime Database 보안 규칙에서
+   auth != null 을 검사해 서버 쪽에서도 쓰기 권한을 막으므로 개발자도구로 우회할 수 없습니다. */
+  function renderAdminRoot(){
+    const root = document.getElementById("adminRoot");
+    if(!fbReady){
+      root.innerHTML = `<div class="admin-lock"><h2>관리자 로그인을 사용할 수 없습니다</h2>
+        <p>실시간 모드(Firebase)가 연결되어야 이메일 로그인을 쓸 수 있습니다. README의 STEP 3을 먼저 진행해 주세요.</p></div>`;
+      return;
+    }
+    if(!isAdminLoggedIn){ root.dataset.shellSport=""; renderAdminLogin(); return; }
+    if(admView==="login") admView="pick";
+    if(admView==="pick"){ root.dataset.shellSport=""; renderAdminPick(); return; }
+    // panel
+    if(root.dataset.shellSport !== admSelSport){
+      renderAdminPanelShell();
+    }else{
+      syncAdminNoticeInputs();
+      renderAdmin();
+      renderScheduleEdit();
+    }
+  }
+
+  function renderAdminLogin(){
+    const root = document.getElementById("adminRoot");
+    root.innerHTML = `
+      <div class="admin-lock">
+        <h2>🔒 관리자 로그인</h2>
+        <p>등록된 관리자 이메일과 비밀번호로 로그인하세요. (모든 종목 공용 계정)</p>
+        <input id="loginEmail" type="email" placeholder="이메일" autocomplete="username" style="letter-spacing:normal;text-align:left" />
+        <input id="loginPw" type="password" placeholder="비밀번호" autocomplete="current-password" style="letter-spacing:normal;text-align:left;margin-top:8px" />
+        <button id="loginBtn" class="btn">로그인</button>
+        <div id="loginErr" class="err">${escapeHtml(admLoginErr)}</div>
+      </div>
+    `;
+    const doLogin = ()=>{
+      const email = document.getElementById("loginEmail").value.trim();
+      const pw = document.getElementById("loginPw").value;
+      if(!email || !pw){
+        admLoginErr = "이메일과 비밀번호를 모두 입력하세요.";
+        document.getElementById("loginErr").textContent = admLoginErr;
+        return;
+      }
+      document.getElementById("loginBtn").disabled = true;
+      auth.signInWithEmailAndPassword(email, pw).catch(()=>{
+        admLoginErr = "로그인 실패: 이메일 또는 비밀번호가 올바르지 않습니다.";
+        document.getElementById("loginErr").textContent = admLoginErr;
+        document.getElementById("loginBtn").disabled = false;
+        document.getElementById("loginPw").value = "";
+        document.getElementById("loginPw").focus();
+      });
+    };
+    document.getElementById("loginBtn").onclick = doLogin;
+    document.getElementById("loginPw").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+    document.getElementById("loginEmail").focus();
+  }
+
+  function renderAdminPick(){
+    const root = document.getElementById("adminRoot");
+    root.innerHTML = `
+      <div class="adm-bar">
+        <span class="who">✅ 관리자 로그인됨 (${escapeHtml(auth.currentUser ? auth.currentUser.email : "")})</span>
+        <button id="logoutBtn" class="btn ghost">로그아웃</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:4px 0 14px">관리할 종목을 선택하세요.</p>
+      <div class="sport-grid">${SPORTS.map(s=>`<div class="sport-card" data-s="${s.id}">
+          <span class="emoji">${s.icon()}</span>
+          <div class="nm">${s.name}</div>
+        </div>`).join("")}</div>
+      <div id="sportCodeBox" class="admin-lock" style="display:none;margin-top:14px">
+        <p id="sportCodeMsg"></p>
+        <input id="sportCode" type="password" inputmode="numeric" placeholder="종목 관리자 비밀번호" autocomplete="off" style="letter-spacing:normal;text-align:left" />
+        <button id="sportCodeBtn" class="btn">확인</button>
+        <div id="sportCodeErr" class="err"></div>
+      </div>
+    `;
+    document.getElementById("logoutBtn").onclick = ()=>{ auth.signOut(); };
+    root.querySelectorAll(".sport-card").forEach(c=>{
+      c.onclick = ()=>{
+        const sid = c.dataset.s;
+        if(!sportUnlocked[SPORT_CODE_GROUP[sid]]){
+          pendingSport = sid;
+          const sp = SPORTS.find(s=>s.id===sid);
+          document.getElementById("sportCodeMsg").textContent = `${sp.name} 관리자 비밀번호를 입력하세요.`;
+          document.getElementById("sportCodeErr").textContent = "";
+          const box = document.getElementById("sportCodeBox");
+          box.style.display = "";
+          const inp = document.getElementById("sportCode");
+          inp.value = ""; inp.focus();
+          return;
+        }
+        enterPanel(sid);
+      };
+    });
+    const checkCode = ()=>{
+      const g = SPORT_CODE_GROUP[pendingSport];
+      const inp = document.getElementById("sportCode");
+      if(g && inp.value === SPORT_CODES[g]){
+        sportUnlocked[g] = true;
+        enterPanel(pendingSport);
+      }else{
+        document.getElementById("sportCodeErr").textContent = "비밀번호가 올바르지 않습니다.";
+        inp.value = ""; inp.focus();
+      }
+    };
+    document.getElementById("sportCodeBtn").onclick = checkCode;
+    document.getElementById("sportCode").addEventListener("keydown", e=>{ if(e.key==="Enter") checkCode(); });
+    const enterPanel = (sid)=>{
+      {
+        admSelSport = sid;
+        admStage = "group";
+        admDivision = null;
+        admPool = "A";
+        sedStage = "group"; sedDivision = null; sedPool = null; sedMatchId = "";
+        admView = "panel";
+        renderAdminRoot();
+      }
+    };
+  }
+
+  function syncAdminNoticeInputs(){
+    const ni = document.getElementById("noticeInput");
+    if(ni && document.activeElement !== ni) ni.value = noticeGlobal || "";
+    const nsi = document.getElementById("noticeSportInput");
+    if(nsi && document.activeElement !== nsi) nsi.value = admSelSport ? (noticeBySport[admSelSport]||"") : "";
+  }
+
+  function renderAdminStageTabs(){
+    const el = document.getElementById("admStageTabs");
+    if(!el) return;
+    el.querySelectorAll("button").forEach(b=> b.classList.toggle("active", b.dataset.v===admStage));
+  }
+
+  function renderAdminDivTabs(){
+    const el = document.getElementById("admDivTabs");
+    if(!el) return;
+    el.querySelectorAll("button").forEach(b=> b.classList.toggle("active", b.dataset.v===admDivision));
+  }
+
+  function renderAdminPoolTabs(){
+    const el = document.getElementById("admPoolTabs");
+    if(!el) return;
+    el.querySelectorAll("button").forEach(b=> b.classList.toggle("active", b.dataset.v===admPool));
+  }
+
+  function renderAdminPanelShell(){
+    const root = document.getElementById("adminRoot");
+    const sport = sportById[admSelSport];
+    const hasStage = STAGE_SPORTS.has(admSelSport);
+    const divisions = hasStage ? divisionsFor(admSelSport, admStage) : null;
+    if(hasStage && (!admDivision || !divisions.includes(admDivision))) admDivision = divisions[0];
+    const pools = hasStage ? poolsFor(admSelSport, admDivision) : null;
+    if(hasStage && !pools.includes(admPool)) admPool = pools[0];
+    root.dataset.shellSport = admSelSport;
+    root.innerHTML = `
+      <div class="adm-bar">
+        <button class="back-btn" id="admBack">← 종목 선택</button>
+        <span class="who">✅ <span class="emoji-inline">${sport.icon()}</span> ${sport.name} 관리자 모드 · 입력 즉시 모든 사용자 화면에 반영됩니다</span>
+        <button id="logoutBtn" class="btn ghost">로그아웃</button>
+      </div>
+
+      <div class="notice-edit">
+        <label>📢 대회 전체 공지사항</label>
+        <textarea id="noticeInput" rows="4" placeholder="모든 종목 화면 상단에 공통으로 보여줄 공지사항을 입력하세요.">${escapeHtml(noticeGlobal||"")}</textarea>
+        <div class="adm-actions">
+          <button id="noticeSave" class="btn">전체 공지 저장</button>
+          <button id="noticeClear" class="btn ghost">전체 공지 삭제</button>
+        </div>
+      </div>
+
+      <div class="notice-edit">
+        <label>📢 ${escapeHtml(sport.name)} 종목 공지사항</label>
+        <textarea id="noticeSportInput" rows="3" placeholder="${escapeHtml(sport.name)} 화면에만 표시될 공지사항을 입력하세요.">${escapeHtml(noticeBySport[admSelSport]||"")}</textarea>
+        <div class="adm-actions">
+          <button id="noticeSportSave" class="btn">종목 공지 저장</button>
+          <button id="noticeSportClear" class="btn ghost">종목 공지 삭제</button>
+        </div>
+      </div>
+
+      ${hasStage ? `<div class="stage-tabs" id="admStageTabs">${stagesFor(admSelSport).map(st=>`<button class="${st.id===admStage?"active":""}" data-v="${st.id}">${st.name}</button>`).join("")}</div>` : ``}
+      ${hasStage ? `<div class="filters" id="admDivTabs">${divisions.map(d=>`<button class="${d===admDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`).join("")}</div>` : ``}
+      ${hasStage && admStage==="group" && showPoolTabs(admSelSport, admDivision) ? `<div class="filters" id="admPoolTabs">${pools.map(p=>`<button class="${p===admPool?"active":""}" data-v="${p}">${p}조</button>`).join("")}</div>` : ``}
+
+      <div id="adminList"></div>
+
+      <div id="scheduleEdit" class="add-form sched-edit"></div>
+    `;
+
+    document.getElementById("admBack").onclick = ()=>{ admView="pick"; renderAdminRoot(); };
+    document.getElementById("logoutBtn").onclick = ()=>{ auth.signOut(); };
+    document.getElementById("noticeSave").onclick = ()=>{
+      saveNoticeGlobal(document.getElementById("noticeInput").value);
+    };
+    document.getElementById("noticeClear").onclick = ()=>{
+      if(confirm("대회 전체 공지사항을 삭제할까요?")){
+        document.getElementById("noticeInput").value = "";
+        saveNoticeGlobal("");
+      }
+    };
+    document.getElementById("noticeSportSave").onclick = ()=>{
+      saveNoticeSport(admSelSport, document.getElementById("noticeSportInput").value);
+    };
+    document.getElementById("noticeSportClear").onclick = ()=>{
+      if(confirm(sport.name+" 종목 공지사항을 삭제할까요?")){
+        document.getElementById("noticeSportInput").value = "";
+        saveNoticeSport(admSelSport, "");
+      }
+    };
+    if(hasStage){
+      document.getElementById("admStageTabs").querySelectorAll("button").forEach(b=>{
+        b.onclick = ()=>{ admStage=b.dataset.v; renderAdminPanelShell(); };
+      });
+      document.getElementById("admDivTabs").querySelectorAll("button").forEach(b=>{
+        b.onclick = ()=>{ admDivision=b.dataset.v; renderAdminPanelShell(); };
+      });
+      const pt = document.getElementById("admPoolTabs");
+      if(pt) pt.querySelectorAll("button").forEach(b=>{
+        b.onclick = ()=>{
+          admPool=b.dataset.v; renderAdminPoolTabs(); renderAdmin();
+        };
+      });
+    }
+
+    renderAdmin();
+    renderScheduleEdit(true);
+  }
+
+  /* ---- 경기 결과 입력 폼 · 자동 계산 ----
+     배구: 1~3세트 점수 → 세트 승패(이긴 팀 1점/진 팀 0점) → 최종 세트 점수(2승 선취 시 승자 확정)
+     배드민턴: 1~3세트 점수 → 총 득점(세트 점수 합산) 높은 팀 승 → 동률이면 세트 득실차
+     농구·3X3: 점수(자유 입력) + 승자 */
+  const SET_SPORTS = {volleyball:3, badminton:3};
+
+  function resultFormHtml(m){
+    if(SET_SPORTS[admSelSport]){
+      const sets = m.sets || [];
+      let h = `<div class="set-grid"><span></span><span class="lbl c">${escapeHtml(m.teamA||"팀 A")}</span><span class="lbl c">${escapeHtml(m.teamB||"팀 B")}</span>`;
+      for(let i=0;i<SET_SPORTS[admSelSport];i++){
+        const s = sets[i] || {};
+        h += `<span class="set-lbl">${i+1}세트</span>`
+          + `<input class="i-set-a" type="number" min="0" inputmode="numeric" value="${escapeHtml(s.a==null?"":s.a)}">`
+          + `<input class="i-set-b" type="number" min="0" inputmode="numeric" value="${escapeHtml(s.b==null?"":s.b)}">`;
+      }
+      h += `</div>`;
+      if(admSelSport==="volleyball"){
+        const fo = m.forfeit || "";
+        h += `<div class="adm-in full"><div><span class="lbl">기권·몰수 (승은 인정, 점수율 환산 미적용)</span>
+          <select class="i-forfeit">
+            <option value="" ${!fo?"selected":""}>해당 없음</option>
+            <option value="A" ${fo==="A"?"selected":""}>${escapeHtml(m.teamA||"팀 A")} 승 (상대 기권·몰수)</option>
+            <option value="B" ${fo==="B"?"selected":""}>${escapeHtml(m.teamB||"팀 B")} 승 (상대 기권·몰수)</option>
+          </select></div></div>`;
+      }
+      return h;
+    }
+    return `<div class="adm-in">
+      <div><span class="lbl">점수 (팀A:팀B 순서, 예: 58:42)</span><input class="i-score" value="${escapeHtml(m.score||"")}"></div>
+      <div><span class="lbl">승자</span>
+        <select class="i-winner">
+          <option value="" ${!m.winner?"selected":""}>미정</option>
+          <option value="A" ${m.winner==="A"?"selected":""}>팀 A 승</option>
+          <option value="B" ${m.winner==="B"?"selected":""}>팀 B 승</option>
+          <option value="D" ${m.winner==="D"?"selected":""}>무승부</option>
+        </select></div>
+    </div>`;
+  }
+
+  function readResultForm(row){
+    const f = {};
+    const sa = row.querySelectorAll(".i-set-a"), sb = row.querySelectorAll(".i-set-b");
+    if(sa.length) f.sets = [...sa].map((el,i)=>({a:el.value.trim(), b:sb[i].value.trim()}));
+    const fo = row.querySelector(".i-forfeit");
+    if(fo) f.forfeit = fo.value;
+    const sc = row.querySelector(".i-score");
+    if(sc){ f.score = sc.value.trim(); f.winner = row.querySelector(".i-winner").value; }
+    return f;
+  }
+
+  function calcResult(sportId, f, nameA, nameB){
+    const out = {score:"", winner:"", detail:"", store:{}, previewHtml:""};
+    const line = t=>`<div>${t}</div>`;
+    const eA = escapeHtml(nameA), eB = escapeHtml(nameB);
+    if(SET_SPORTS[sportId]){
+      let wa=0, wb=0, ta=0, tb=0, played=0, prev="";
+      const detailParts = [];
+      const sets = (f.sets||[]).map(s=>({a:s.a, b:s.b}));
+      if(f.forfeit){
+        // 기권·몰수: 승은 인정, 점수(율) 환산은 적용하지 않음
+        out.winner = f.forfeit;
+        out.score = "기권승";
+        out.detail = `기권·몰수 (${f.forfeit==="A"?nameA:nameB} 승 인정 · 세트 2:0 · 점수율 환산 미적용)`;
+        out.store = {sets:sets, forfeit:f.forfeit};
+        out.previewHtml = line(`기권·몰수: <b>${f.forfeit==="A"?eA:eB}</b> 승 인정 · 세트 2:0 · 점수율 환산 미적용`);
+        return out;
+      }
+      sets.forEach((s,i)=>{
+        if(s.a==="" || s.b==="") return;
+        const na=Number(s.a), nb=Number(s.b);
+        played++; ta+=na; tb+=nb;
+        let pa=0, pb=0;
+        if(na>nb){ wa++; pa=1; } else if(nb>na){ wb++; pb=1; }
+        detailParts.push(`${i+1}세트 ${na}:${nb}`);
+        prev += line(`${i+1}세트 ${na}:${nb} → ${eA} <b>${pa}점</b> · ${eB} <b>${pb}점</b>`);
+      });
+      if(played && sportId==="badminton"){
+        // 승리팀 결정: ① 총득점 ② (동률 시) 세트 득실차 ③ (동률 시) 점수 득실차
+        // 세트 득실차 = 이긴 세트 - 진 세트, 점수 득실차 = 득점 - 실점 (두 팀 경기라 값이 높은 팀이 우세)
+        const full = played === SET_SPORTS[sportId];
+        let by = "";
+        if(ta!==tb){ out.winner = ta>tb ? "A" : "B"; by = "총득점"; }
+        else if(wa!==wb){ out.winner = wa>wb ? "A" : "B"; by = "세트 득실차"; }
+        else{ out.winner = "D"; by = "총득점·세트 득실차 동률"; }
+        if(!full) out.winner = "";
+        out.score = `${ta}:${tb}`;
+        out.detail = `총득점 ${ta}:${tb} · 세트 ${wa}:${wb} (${detailParts.join(", ")})`;
+        prev += line(`총득점 <b>${ta}:${tb}</b> · 세트 득실 <b>${wa}:${wb}</b> (득실차 ${wa-wb>0?"+":""}${wa-wb} / ${wb-wa>0?"+":""}${wb-wa})`);
+        prev += line(out.winner
+          ? `결과: <b>${out.winner==="D" ? "무승부" : (out.winner==="A"?eA:eB)+" 승"}</b> (${by} 기준)`
+          : `(1~3세트를 모두 입력하면 결과가 확정됩니다)`);
+      }else if(played){
+        out.score = `${wa}:${wb}`;
+        if(wa>=2) out.winner="A"; else if(wb>=2) out.winner="B";
+        out.detail = detailParts.join(" · ");
+        prev += line(`최종 세트 점수 <b>${wa}:${wb}</b>`
+          + (out.winner ? ` · 승리: <b>${out.winner==="A"?eA:eB}</b>` : ` · (2세트 선승 시 승자 확정)`));
+      }else prev = line(`세트 점수를 입력하면 자동 계산됩니다.`);
+      out.store = {sets:sets, forfeit:""};
+      out.previewHtml = prev;
+      return out;
+    }
+    out.score = f.score||""; out.winner = f.winner||"";
+    return out;
+  }
+
+  let admPending = false;
+  /* ---- 경기 일정·장소 수정 (관리자 화면 맨 아래) ----
+     단계 → 종별 → 조 → 경기 순서로 드롭다운을 골라 경기를 조회한 뒤 날짜·시간·장소·팀명을 수정합니다. */
+  function renderScheduleEdit(force){
+    const el = document.getElementById("scheduleEdit");
+    if(!el || !admSelSport || !isAdminLoggedIn) return;
+    if(!force && el.contains(document.activeElement)) return;   // 입력 중에는 다시 그리지 않음
+    const sid = admSelSport;
+    const hasStage = STAGE_SPORTS.has(sid);
+    const opt = (v, label, cur)=>`<option value="${escapeHtml(v)}" ${v===cur?"selected":""}>${escapeHtml(label)}</option>`;
+    let sel = "";
+    let list = Object.entries(matches).filter(([,m])=>m.sport===sid && m.stage!=="tiebreak")
+      .sort((a,b)=>(a[1].order||0)-(b[1].order||0));
+    if(hasStage){
+      const stages = stagesFor(sid);
+      if(!stages.some(s=>s.id===sedStage)) sedStage = stages[0].id;
+      const divs = divisionsFor(sid, sedStage);
+      if(!sedDivision || !divs.includes(sedDivision)) sedDivision = divs[0];
+      sel += `<div class="grid2"><div><label>단계</label><select id="se_stage">${stages.map(s=>opt(s.id,s.name,sedStage)).join("")}</select></div>
+        <div><label>종별(구분)</label><select id="se_div">${divs.map(d=>opt(d,d,sedDivision)).join("")}</select></div></div>`;
+      list = list.filter(([,m])=>(m.stage||"group")===sedStage && (m.group||"")===sedDivision);
+      if(sedStage==="group"){
+        const pools = poolsFor(sid, sedDivision);
+        if(!sedPool || !pools.includes(sedPool)) sedPool = pools[0];
+        if(showPoolTabs(sid, sedDivision)) sel += `<div class="grid1"><label>조</label><select id="se_pool">${pools.map(p=>opt(p,p+"조",sedPool)).join("")}</select></div>`;
+        list = list.filter(([,m])=>(m.pool||"")===sedPool);
+      }
+    }
+    if(!list.some(([id])=>id===sedMatchId)) sedMatchId = "";
+    const label = m => `${m.round?m.round+" · ":""}${m.date||"날짜 미정"} ${m.time||""} · ${m.teamA||"미정"} vs ${m.teamB||"미정"}`;
+    sel += `<div class="grid1"><label>경기 선택 (${list.length}경기)</label><select id="se_match">
+      <option value="">— 수정할 경기를 선택하세요 —</option>
+      ${list.map(([id,m])=>`<option value="${id}" ${id===sedMatchId?"selected":""}>${escapeHtml(label(m))}</option>`).join("")}
+    </select></div>`;
+    const cur = sedMatchId ? matches[sedMatchId] : null;
+    const form = cur ? `<div class="se-form">
+        <div class="grid2">
+          <div><label>날짜</label><input id="se_date" value="${escapeHtml(cur.date||"")}" placeholder="예: 11월 29일(토)"></div>
+          <div><label>시간</label><input id="se_time" value="${escapeHtml(cur.time||"")}" placeholder="예: 09:00"></div>
+        </div>
+        <div class="grid1"><label>장소</label><input id="se_place" value="${escapeHtml(cur.place||"")}"></div>
+        <div class="grid2">
+          <div><label>팀 A</label><input id="se_teamA" value="${escapeHtml(cur.teamA||"")}"></div>
+          <div><label>팀 B</label><input id="se_teamB" value="${escapeHtml(cur.teamB||"")}"></div>
+        </div>
+        <button id="se_save" class="btn">일정 수정 저장</button>
+      </div>` : "";
+    el.innerHTML = `<h3>🗓️ 경기 일정·장소 수정</h3>${sel}${form}`;
+
+    const rerender = ()=>renderScheduleEdit(true);
+    const on = (id, fn)=>{ const x = document.getElementById(id); if(x) x.onchange = fn; };
+    on("se_stage", e=>{ sedStage = e.target.value; sedDivision = null; sedPool = null; sedMatchId = ""; rerender(); });
+    on("se_div",   e=>{ sedDivision = e.target.value; sedPool = null; sedMatchId = ""; rerender(); });
+    on("se_pool",  e=>{ sedPool = e.target.value; sedMatchId = ""; rerender(); });
+    on("se_match", e=>{ sedMatchId = e.target.value; rerender(); });
+    const sv = document.getElementById("se_save");
+    if(sv) sv.onclick = ()=>{
+      const teamA = document.getElementById("se_teamA").value.trim();
+      const teamB = document.getElementById("se_teamB").value.trim();
+      if(!teamA || !teamB){ alert("팀 A, 팀 B 이름을 모두 입력하세요."); return; }
+      updateMatch(sedMatchId, {
+        date: document.getElementById("se_date").value.trim(),
+        time: document.getElementById("se_time").value.trim(),
+        place: document.getElementById("se_place").value.trim(),
+        teamA, teamB
+      }).then(rerender);
+    };
+  }
+
+  /* ---- 배드민턴 동률 결정 복식 1경기 입력 (조/풀리그 순위가 모든 기준에서 동률일 때만 표시) ---- */
+  function tiebreakAdminHtml(list){
+    const isThree = admSelSport==="three" || admSelSport==="basketball";
+    if((admSelSport!=="badminton" && !isThree) || (admStage!=="group" && admStage!=="league")) return "";
+    const pool = admStage==="group" ? admPool : "";
+    const rows = isThree ? threeStandings(list.map(([,m])=>m), null, admSelSport).rows : badmintonStandings(list.map(([,m])=>m), null);
+    const gk = r => isThree ? r.tier : r.key;
+    const keys = [...new Set(rows.filter(r=>r.tie).map(gk))];
+    if(!keys.length) return "";
+    const saved = tiebreakRanks(admDivision, pool) || {};
+    return `<div class="adm-row tb-box" data-div="${escapeHtml(admDivision)}" data-pool="${escapeHtml(pool)}">
+      <div class="idx"><span>${isThree ? "🎲 동률 순위 결정 (승부 던지기)" : "🏸 동률 순위 결정 복식 1경기"}</span></div>
+      <div class="tb-desc">${isThree
+        ? (admSelSport==="basketball" ? "승패·상대 전적·득실·다득점이 모두 같은 팀입니다. 승자 뽑기 결과에 따라" : "승수·상대 전적·평균 득점이 모두 같은 팀입니다. 승부 던지기 결과에 따라") + "  동률 팀끼리의 순위를 선택하세요."
+        : "승점·총득점·세트 득실차·점수 득실차가 모두 같은 팀입니다. 새로운 복식조로 진행한 복식 1경기 결과에 따라 동률 팀끼리의 순위를 선택하세요."}</div>
+      ${keys.map(k=>{
+        const grp = rows.filter(r=>gk(r)===k);
+        return `<div class="tb-group">
+          <div class="tb-title">동률 팀 (기준 순위 ${grp[0].rank}위)</div>
+          ${grp.map(r=>`<div class="tb-line"><span>${escapeHtml(r.team)}</span>
+            <select class="i-tb" data-team="${escapeHtml(r.team)}" data-n="${grp.length}">
+              <option value="">미정</option>
+              ${grp.map((_,i)=>`<option value="${i+1}" ${Number(saved[r.team])===i+1?"selected":""}>${grp[0].rank+i}위</option>`).join("")}
+            </select></div>`).join("")}
+        </div>`;
+      }).join("")}
+      <div class="adm-actions">
+        <button class="btn tb-save">복식 결과 저장</button>
+        <button class="btn ghost tb-clear">초기화</button>
+      </div>
+    </div>`;
+  }
+  function bindTiebreakAdmin(wrap){
+    const box = wrap.querySelector(".tb-box");
+    if(!box) return;
+    const div = box.dataset.div, pool = box.dataset.pool, id = tbId(div, pool);
+    const write = ranks=>{
+      matches[id] = {sport:admSelSport, stage:"tiebreak", group:div, pool:pool, ranks:ranks, ts:Date.now()};
+      persistMatches();
+    };
+    box.querySelector(".tb-save").onclick = ()=>{
+      const ranks = {};
+      let ok = true;
+      box.querySelectorAll(".tb-group").forEach(g=>{
+        const sels = [...g.querySelectorAll(".i-tb")];
+        const vals = sels.map(s=>s.value);
+        if(vals.some(v=>!v) || new Set(vals).size!==vals.length) ok = false;
+        sels.forEach(s=>{ if(s.value) ranks[s.dataset.team] = Number(s.value); });
+      });
+      if(!ok){ alert("동률 팀마다 서로 다른 순위를 모두 선택해 주세요."); return; }
+      write(ranks);
+    };
+    box.querySelector(".tb-clear").onclick = ()=>{
+      if(confirm("동률 순위 결정 결과를 초기화할까요?")) write({});
+    };
+  }
+
+  function renderAdmin(){
+    if(admView!=="panel" || !admSelSport || !isAdminLoggedIn) return;
+    const wrap = document.getElementById("adminList");
+    if(!wrap) return;
+    const hasStage = STAGE_SPORTS.has(admSelSport);
+    let list = matchesOf(admSelSport);
+    if(hasStage){
+      list = list.filter(([,m])=> (m.stage||"group") === admStage);
+      list = list.filter(([,m])=> (m.group||"") === admDivision);
+      if(admStage==="group") list = list.filter(([,m])=> (m.pool||"") === admPool);
+    }
+    if(document.activeElement && wrap.contains(document.activeElement)){
+      admPending = true; return;
+    }
+    admPending = false;
+    if(!list.length){
+      wrap.innerHTML = `<div class="empty-msg">등록된 ${sportById[admSelSport].name}${hasStage ? " · "+stageLabel(admSelSport, admStage)+" · "+admDivision+(admStage==="group"?" · "+admPool+"조":"") : ""} 경기가 없습니다.</div>`;
+      return;
+    }
+    wrap.innerHTML = list.map(([id,m],i)=>`<div class="adm-row" data-id="${id}">
+        <div class="idx">
+          <span>#${i+1} ${m.winner?`<span class="saved-tag">· 결과 입력됨</span>`:""}</span>
+        </div>
+        <div class="adm-info">
+          <div class="adm-when">${escapeHtml([m.date,m.time,m.place,m.group,m.round].filter(Boolean).join(" · ")||"일정 미정")}</div>
+          <div class="adm-teams">${escapeHtml(m.teamA||"미정")} <span class="vs">VS</span> ${escapeHtml(m.teamB||"미정")}</div>
+        </div>
+        ${resultFormHtml(m)}
+        <div class="res-preview"></div>
+        <div class="adm-actions">
+          <button class="btn save">결과 저장</button>
+          <button class="btn ghost clear">결과 초기화</button>
+        </div>
+      </div>`).join("") + tiebreakAdminHtml(list);
+
+    bindTiebreakAdmin(wrap);
+    wrap.querySelectorAll(".adm-row[data-id]").forEach(row=>{
+      const id = row.dataset.id;
+      const m = resolveMatch(matches[id]);
+      const nameA = m.teamA||"팀 A", nameB = m.teamB||"팀 B";
+      const refresh = ()=>{
+        row.querySelector(".res-preview").innerHTML = calcResult(admSelSport, readResultForm(row), nameA, nameB).previewHtml;
+      };
+      row.addEventListener("input", refresh);
+      row.addEventListener("change", refresh);
+      refresh();
+      row.querySelector(".save").onclick = ()=>{
+        const r = calcResult(admSelSport, readResultForm(row), nameA, nameB);
+        updateMatch(id, Object.assign({score:r.score, winner:r.winner, detail:r.detail}, r.store));
+      };
+      row.querySelector(".clear").onclick = ()=>{
+        if(confirm("이 경기의 결과를 초기화할까요?"))
+          updateMatch(id, {score:"", winner:"", detail:"", sets:null, forfeit:""});
+      };
+    });
+  }
+  document.addEventListener("focusout", e=>{
+    const wrap = document.getElementById("adminList");
+    if(!wrap || !wrap.contains(e.target)) return;
+    setTimeout(()=>{
+      if(admPending && !wrap.contains(document.activeElement)){
+        admPending = false; renderAdmin();
+      }
+    },150);
+  });
+
+/* ================= 탭 ================= */
+  document.querySelectorAll(".tabs button").forEach(b=>{
+    b.onclick = ()=>{
+      document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      ["home","search","admin"].forEach(t=>{
+        document.getElementById("tab-"+t).classList.toggle("hide", t!==b.dataset.tab);
+      });
+      if(b.dataset.tab==="admin") renderAdminRoot();
+      if(b.dataset.tab==="search") renderGlobalSearch();
+    };
+  });
+
+/* ================= 시작 ================= */
+  initStore();
+  renderAll();
+  renderAdminRoot();
+</script>
+</body>
+</html>
