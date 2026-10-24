@@ -113,6 +113,22 @@
   }
   .filters button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
+  /* 종별(구분) 탭: 상단 메뉴·단계 탭(핑크)과 구분되도록 차분한 블루 계열 사용 */
+  /* 남중=블루, 여중=퍼플, 남고=틸 (핑크 메뉴색과 겹치지 않게) */
+  .dv-m{--dv:59,130,246;--dvt:#93c5fd;--dvs:#2563eb;--dvb:#60a5fa}
+  .dv-f{--dv:244,114,182;--dvt:#f9a8d4;--dvs:#db2777;--dvb:#f472b6}
+  .dv-h{--dv:20,184,166;--dvt:#5eead4;--dvs:#0d9488;--dvb:#2dd4bf}
+  .dv-mh{--dv:6,182,212;--dvt:#67e8f9;--dvs:#0e90a8;--dvb:#22d3ee}
+  .dv-t{--dv:234,179,8;--dvt:#fde047;--dvs:#a98304;--dvb:#facc15}
+  .dv-fh{--dv:239,68,68;--dvt:#fca5a5;--dvs:#dc2626;--dvb:#f87171}
+  .dv-e{--dv:132,204,22;--dvt:#bef264;--dvs:#4d7c0f;--dvb:#a3e635}
+  .filters button[class*="dv-"]{
+    border-color:rgba(var(--dv),.45);background:rgba(var(--dv),.12);color:var(--dvt)
+  }
+  .filters button[class*="dv-"].active{
+    background:var(--dvs);border-color:var(--dvb);color:#fff;box-shadow:0 4px 12px rgba(var(--dv),.4)
+  }
+
   .stage-tabs{display:flex;gap:8px;margin-bottom:12px}
   .stage-tabs button{
     flex:1;padding:10px 8px;border:1px solid var(--line);background:var(--card);
@@ -182,8 +198,22 @@
     display:inline-block;padding:5px 16px;border-radius:999px;margin:0 0 10px
   }
   .bracket-arrow{text-align:center;color:var(--accent2);font-size:20px;line-height:1;margin:0 0 10px;opacity:.75}
+  .match[class*="dv-"]{border-left:4px solid var(--dvb)}
   .match.bracket-empty{border-style:dashed;opacity:.5}
   .match.bracket-empty .team{color:var(--muted)}
+
+  /* 팀명 한 줄 고정: 화면 폭에 맞춰 글자 크기를 줄여 줄바꿈 방지 */
+  .gt-teams .team-name, .row .team{white-space:nowrap;word-break:keep-all}
+  .gt-teams .team-name{font-size:clamp(10.5px,3.3vw,15px);letter-spacing:-.4px}
+  .row .team{font-size:clamp(11px,3.6vw,15px)}
+  @media(max-width:520px){
+    .gt-result{min-width:0}
+    .gt-teams{gap:4px}
+    .gt-score{font-size:clamp(14px,4.6vw,19px);letter-spacing:0}
+    .group-table th, .group-table td{padding-left:3px;padding-right:3px}
+    .gt-when, .gt-where{font-size:10px}
+    .gt-where{white-space:normal;word-break:keep-all}
+  }
 
   .day{margin-bottom:18px}
   .day h2{
@@ -196,6 +226,7 @@
   .match .meta{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--muted);margin-bottom:7px;flex-wrap:wrap}
   .badge{background:rgba(255,255,255,.06);border-radius:6px;padding:2px 7px;font-weight:700;color:var(--muted)}
   .badge.round{background:var(--accent-soft);color:var(--accent2)}
+  .badge[class*="dv-"]{background:rgba(var(--dv),.22);color:var(--dvt);border:1px solid rgba(var(--dv),.5)}
   .badge.done{background:var(--win-soft);color:var(--win)}
   .row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
   .team{font-size:15px;font-weight:800;color:var(--text);letter-spacing:-.2px}
@@ -420,15 +451,15 @@
   const DIVISIONS_BY_SPORT = {
     basketball: ["여중 1,2학년", "남중 1,2학년", "남고 1,2학년"],
     three:      ["남초 5,6학년", "여중 3학년", "남중 3학년", "남고 3학년"],
-    volleyball: ["남중저학년", "남중고학년", "여중저학년", "여중고학년", "남고", "여고"],
+    volleyball: ["남중저학년", "남중고학년", "여중저학년", "여중고학년", "남고"],
     badminton:  ["남중저학년", "남중통합부", "여중"]
   };
-  // 단계마다 진행하는 구분이 다른 종목(배구): 조별예선은 조 편성이 있는 종별, 본선(4강·결승)은 남중, 풀리그는 여중·남고·여고
+  // 단계마다 진행하는 구분이 다른 종목(배구): 조별예선은 조 편성이 있는 종별, 본선(4강·결승)은 남중, 풀리그는 여중·남고
   const DIVISIONS_BY_STAGE = {
     volleyball: {
       group:  ["남중저학년", "여중저학년", "남중고학년", "여중고학년"],
       final:  ["남중저학년", "남중고학년"],
-      league: ["여중저학년", "여중고학년", "남고", "여고"]
+      league: ["여중저학년", "여중고학년", "남고"]
     },
     badminton: {
       group:  ["남중저학년", "남중통합부", "여중"]
@@ -535,7 +566,7 @@
 /* ⑦-0 배구 경기 일정 — "2026 강동송파 올스타 교육장배 학교스포츠클럽대회 경기일정(배구).xlsx" 수정본(2) 기준 (78경기).
    [고유번호, 종별, 단계(group/final/league), 조, 라운드, 날짜, 시간, 장소, 팀A, 팀B]
    · 조는 엑셀대로 1조·2조… 숫자로 표기합니다. 남중저·남중고학년: 조별예선(4개 조) → 4강 → 결승,
-     여중저·여중고학년: 조별예선(3개 조) → 풀리그, 남고·여고: 풀리그.
+     여중저·여중고학년: 조별예선(3개 조) → 풀리그, 남고: 풀리그.
    · 본선 진출교가 정해지지 않은 경기는 엑셀대로 "미정"입니다. 확정되면 관리자 탭 "경기 일정·장소 수정"에서 팀명을 고치세요.
    · 엑셀 비고 칸은 넣지 않았습니다.
    예전 배구 일정(vb·vl 번호)이 등록되어 있으면 이 일정으로 한 번에 교체됩니다(관리자 로그인 상태에서 접속할 때 적용). */
@@ -603,9 +634,6 @@
     ['vm61','남고','league','','','11월 21일(토)','08:30','보인고등학교','보인고','배명고'],
     ['vm62','남고','league','','','11월 21일(토)','09:10','보인고등학교','가락고','배명고'],
     ['vm63','남고','league','','','11월 21일(토)','09:50','보인고등학교','보인고','가락고'],
-    ['vm64','여고','league','','','11월 14일(토)','08:30','가락고등학교','가락고','둔촌고'],
-    ['vm65','여고','league','','','11월 14일(토)','09:10','가락고등학교','둔촌고','강일고'],
-    ['vm66','여고','league','','','11월 14일(토)','09:50','가락고등학교','강일고','가락고'],
     ['vm67','여중고학년','league','','','11월 16일(월)','16:30','강명중학교','미정','미정'],
     ['vm68','여중고학년','league','','','11월 16일(월)','17:10','강명중학교','미정','미정'],
     ['vm69','여중고학년','league','','','11월 16일(월)','17:50','강명중학교','미정','미정'],
@@ -1055,6 +1083,7 @@
   }
 
 /* ================= 도우미 ================= */
+  function divCls(d){d=String(d||"");return /남고/.test(d)?"dv-h":/여중?.*고학년/.test(d)?"dv-fh":/여/.test(d)?"dv-f":/초/.test(d)?"dv-e":/통합/.test(d)?"dv-t":/고학년/.test(d)?"dv-mh":/남|중/.test(d)?"dv-m":""}
   function escapeHtml(s){
     return String(s==null?"":s).replace(/[&<>"']/g, c=>({
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -1458,7 +1487,7 @@
       const pools = poolsFor(curSport, schedDivision);
       if(!pools.includes(schedPool)) schedPool = pools[0];
       html += `<div class="filters" id="divTabs">${divisions.map(d=>
-        `<button class="${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
+        `<button class="${divCls(d)} ${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
       ).join("")}</div>`;
       if(showPoolTabs(curSport, schedDivision)){
         html += `<div class="filters" id="poolTabs">${pools.map(p=>
@@ -1476,7 +1505,7 @@
     }else if(hasStage && schedStage==="league"){
       // 풀리그: 구분(부문) → 표
       html += `<div class="filters" id="divTabs">${divisions.map(d=>
-        `<button class="${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
+        `<button class="${divCls(d)} ${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
       ).join("")}</div>`;
       const list = matchesOf(curSport)
         .filter(([,m])=> m.stage === "league")
@@ -1487,7 +1516,7 @@
     }else if(hasStage){
       // 본선 토너먼트: 구분(부문) → 대진표(농구·3X3은 8강부터, 배구는 4강부터)
       html += `<div class="filters" id="divTabs">${divisions.map(d=>
-        `<button class="${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
+        `<button class="${divCls(d)} ${d===schedDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`
       ).join("")}</div>`;
       const list = matchesOf(curSport)
         .filter(([,m])=> (m.stage||"group") === "final")
@@ -1667,11 +1696,11 @@
     const scoreHtml = m.score
       ? `<span class="score">${escapeHtml(m.score)}</span>`
       : `<span class="score"><span class="vs">VS</span></span>`;
-    return `<div class="match">
+    return `<div class="match ${divCls(m.group)}">
       <div class="meta">
         ${opts.showDate && m.date ? `<span class="badge">${escapeHtml(m.date)}</span>`:""}
         ${opts.stageName ? `<span class="badge">${escapeHtml(opts.stageName)}</span>`:""}
-        ${m.group ? `<span class="badge">${escapeHtml(m.group)}</span>`:""}
+        ${m.group ? `<span class="badge ${divCls(m.group)}">${escapeHtml(m.group)}</span>`:""}
         ${m.round ? `<span class="badge round">${escapeHtml(m.round)}</span>`:""}
         <span>${escapeHtml(m.time||"")}</span>
         ${statusBadge}
@@ -1867,7 +1896,7 @@
       </div>
 
       ${hasStage ? `<div class="stage-tabs" id="admStageTabs">${stagesFor(admSelSport).map(st=>`<button class="${st.id===admStage?"active":""}" data-v="${st.id}">${st.name}</button>`).join("")}</div>` : ``}
-      ${hasStage ? `<div class="filters" id="admDivTabs">${divisions.map(d=>`<button class="${d===admDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`).join("")}</div>` : ``}
+      ${hasStage ? `<div class="filters" id="admDivTabs">${divisions.map(d=>`<button class="${divCls(d)} ${d===admDivision?"active":""}" data-v="${escapeHtml(d)}">${escapeHtml(d)}</button>`).join("")}</div>` : ``}
       ${hasStage && admStage==="group" && showPoolTabs(admSelSport, admDivision) ? `<div class="filters" id="admPoolTabs">${pools.map(p=>`<button class="${p===admPool?"active":""}" data-v="${p}">${p}조</button>`).join("")}</div>` : ``}
 
       <div id="adminList"></div>
